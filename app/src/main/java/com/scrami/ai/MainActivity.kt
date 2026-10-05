@@ -201,7 +201,22 @@ class MainActivity : AppCompatActivity() {
         return tv
     }
 
-    private fun loadSaved() {\n        val s = prefs.getString("visual", "") ?: ""\n        if (s.isBlank()) addBubble("Йоу. Я Scrami AI.\\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.", false)\n        else s.split("\\n---\\n").forEach { part ->\n            if (part.startsWith("U:")) addBubble(part.substring(2), true)\n            if (part.startsWith("A:")) addBubble(part.substring(2), false)\n        }\n    }\n\n    private fun newChat(){chat.removeAllViews();prefs.edit().clear().apply();addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.",false)}
+    private fun loadSaved() {
+        val s = prefs.getString("visual", "") ?: ""
+        if (s.isBlank()) {
+            addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.", false)
+        } else {
+            s.split("\n---\n").forEach { part ->
+                if (part.startsWith("U:")) addBubble(part.substring(2), true)
+                if (part.startsWith("A:")) addBubble(part.substring(2), false)
+            }
+        }
+    }
+    private fun newChat() {
+        chat.removeAllViews()
+        prefs.edit().clear().apply()
+        addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.", false)
+    }
     private fun saveVisual() {
         val a = mutableListOf<String>()
         for (i in 0 until chat.childCount) {
@@ -212,7 +227,6 @@ class MainActivity : AppCompatActivity() {
         }
         prefs.edit().putString("visual", a.joinToString("\n---\n").takeLast(16000)).apply()
     }
-    private fun saveVisual(){val a=mutableListOf<String>();for(i in 0 until chat.childCount){val r=chat.getChildAt(i)as?LinearLayout?:continue;val t=r.getChildAt(0)as?TextView?:continue;a.add((if(r.tag==true)"U:"else"A:")+t.text)}prefs.edit().putString("visual",a.joinToString("\n---\n").takeLast(16000)).apply()}
     private fun rounded(fill:Int,r:Float,stroke:Int)=GradientDrawable().apply{setColor(fill);cornerRadius=dp(r).toFloat();if(stroke!=Color.TRANSPARENT)setStroke(dp(1),stroke)}
     private fun grad(c:IntArray,r:Float)=GradientDrawable(GradientDrawable.Orientation.TL_BR,c).apply{cornerRadius=dp(r).toFloat()}
     private fun dp(v:Int)= (v*resources.displayMetrics.density).roundToInt()
