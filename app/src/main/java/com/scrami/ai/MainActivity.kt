@@ -1,5 +1,13 @@
 package com.scrami.ai
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -8,6 +16,8 @@ import android.view.Gravity
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import dev.ffmpegkit.llama.Llama
 import dev.ffmpegkit.llama.LlamaConfig
 import dev.ffmpegkit.llama.LlamaModel
@@ -18,9 +28,10 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Locale
 import kotlin.math.roundToInt
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var chat: LinearLayout
     private lateinit var input: EditText
     private lateinit var send: TextView
@@ -32,9 +43,13 @@ class MainActivity : AppCompatActivity() {
     private var model: LlamaModel? = null
     private val fileName = "qwen2.5-0.5b-instruct-q4_0.gguf"
     private val url = "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf"
+    private var currentMode = "SMART"
+    private var tts: TextToSpeech? = null
+    private var recognizer: SpeechRecognizer? = null
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
+        tts = TextToSpeech(this, this)
         buildUi()
         loadSaved()
         splash()
@@ -64,9 +79,13 @@ class MainActivity : AppCompatActivity() {
         names.addView(status)
         header.addView(names, LinearLayout.LayoutParams(0,-2,1f))
         header.addView(TextView(this).apply {
-            text="＋"; textSize=25f; gravity=Gravity.CENTER; setTextColor(Color.WHITE); setOnClickListener{newChat()}
+            text="☰"; textSize=22f; gravity=Gravity.CENTER; setTextColor(Color.WHITE); setOnClickListener{showTools()}
         }, LinearLayout.LayoutParams(dp(48),dp(44)))
         root.addView(header)
+        val modeScroll = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
+        val modeRow = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        buildModeRow(modeRow); modeScroll.addView(modeRow)
+        root.addView(modeScroll, LinearLayout.LayoutParams(-1,dp(44)))
 
         val scroll = ScrollView(this).apply { isFillViewport=true; setPadding(0,dp(8),0,dp(8)) }
         chat = LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(0,dp(8),0,dp(8)) }
@@ -89,6 +108,8 @@ class MainActivity : AppCompatActivity() {
             setPadding(dp(16),dp(12),dp(12),dp(12));background=rounded(Color.rgb(20,21,29),24f,Color.rgb(43,44,56));maxLines=5
         }
         composer.addView(input,LinearLayout.LayoutParams(0,dp(56),1f))
+        val mic = TextView(this).apply { text="🎙"; textSize=19f; gravity=Gravity.CENTER; setTextColor(Color.WHITE); background=rounded(Color.rgb(20,21,26),28f,Color.rgb(45,46,54)); setOnClickListener { startVoice() } }
+        composer.addView(mic,LinearLayout.LayoutParams(dp(52),dp(56)).apply{leftMargin=dp(6)})
         send=TextView(this).apply{
             text="↑";gravity=Gravity.CENTER;textSize=24f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE)
             background=grad(intArrayOf(Color.rgb(154,83,255),Color.rgb(104,56,210)),28f);setOnClickListener{sendMessage()}
@@ -177,7 +198,7 @@ class MainActivity : AppCompatActivity() {
             try{
                 val history=prefs.getString("history","")?:""
                 val prompt=if(history.isBlank())text else history.takeLast(8000)+"\nUSER: "+text+"\nASSISTANT:"
-                val result=Llama.complete(loaded,prompt=prompt,systemPrompt="Ты — Scrami AI, стильный личный помощник. Отвечай естественно, полезно и по делу. В основном на русском. Не утверждай, что ты ChatGPT. Если не знаешь — честно скажи.",maxTokens=384)
+                val result=Llama.complete(loaded,prompt=prompt,systemPrompt=systemPromptForMode(),maxTokens=if(currentMode=="FAST")220 else 480)
                 val answer=result.text.trim().ifBlank{"Не смог сформировать ответ."}
                 prefs.edit().putString("history",(history+"\nUSER: "+text+"\nASSISTANT: "+answer).takeLast(12000)).apply()
                 withContext(Dispatchers.Main){
@@ -188,6 +209,20 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun modeName(m:String)=when(m){"FAST"->"⚡ FAST";"SMART"->"🧠 SMART";"CREATIVE"->"🎨 CREATIVE";"CODE"->"💻 CODE";else->"📚 STUDY"}
+    private fun buildModeRow(row:LinearLayout){row.removeAllViews();listOf("FAST","SMART","CREATIVE","CODE","STUDY").forEach{m->row.addView(TextView(this).apply{text=modeName(m);textSize=10f;gravity=Gravity.CENTER;setPadding(dp(12),0,dp(12),0);setTextColor(if(m==currentMode)Color.BLACK else Color.WHITE);background=rounded(if(m==currentMode)Color.WHITE else Color.rgb(20,21,26),18f,Color.TRANSPARENT);setOnClickListener{currentMode=m;buildModeRow(row)}},LinearLayout.LayoutParams(dp(105),dp(34)).apply{rightMargin=dp(6)})}}
+    private fun systemPromptForMode()=when(currentMode){"FAST"->"Ты Scrami AI FAST. Отвечай максимально быстро и кратко."; "CREATIVE"->"Ты Scrami AI CREATIVE. Ты креативный автор: музыка, тексты, идеи."; "CODE"->"Ты Scrami AI CODE. Ты senior программист. Давай рабочий код."; "STUDY"->"Ты Scrami AI STUDY. Объясняй школьные темы просто и с примерами."; else->"Ты Scrami AI SMART — личный помощник. Отвечай естественно и полезно. Если не знаешь — честно скажи."}
+    private fun showTools(){PopupMenu(this,send).apply{menu.add("＋ New chat");menu.add("💬 History");menu.add("🔎 Search");menu.add("🌐 Web");menu.add("📁 File");menu.add("🧮 Calculator");menu.add("🎨 Profile");menu.add("🔊 Read last answer");setOnMenuItemClickListener{when(it.title.toString()){"＋ New chat"->newChat();"💬 History"->showHistory();"🔎 Search"->searchHistory();"🌐 Web"->openWeb();"📁 File"->pickFile();"🧮 Calculator"->calculator();"🎨 Profile"->profile();"🔊 Read last answer"->speakLast()};true};show()}}
+    private fun showHistory(){AlertDialog.Builder(this).setTitle("Chat history").setMessage((prefs.getString("history","")?:"").takeLast(5000).ifBlank{"No saved messages yet."}).setPositiveButton("OK",null).show()}
+    private fun searchHistory(){val e=EditText(this);e.hint="Search history";AlertDialog.Builder(this).setTitle("Search").setView(e).setPositiveButton("Find"){_,_->val h=prefs.getString("history","")?:"";val q=e.text.toString();AlertDialog.Builder(this).setTitle("Results").setMessage(h.lines().filter{it.contains(q,true)}.joinToString("\n").take(5000).ifBlank{"Nothing found."}).setPositiveButton("OK",null).show()}.setNegativeButton("Cancel",null).show()}
+    private fun openWeb(){val q=input.text.toString().trim();if(q.isBlank()){Toast.makeText(this,"Type a search query first.",Toast.LENGTH_SHORT).show();return};startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/search?q="+Uri.encode(q))))}
+    private fun pickFile(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="*/*";addCategory(Intent.CATEGORY_OPENABLE)},44)}
+    private fun calculator(){val e=EditText(this);e.hint="Example: 42";AlertDialog.Builder(this).setTitle("Calculator").setView(e).setPositiveButton("Calculate"){_,_->Toast.makeText(this,e.text.toString().toDoubleOrNull()?.toString()?:"Use a number",Toast.LENGTH_SHORT).show()}.show()}
+    private fun profile(){val e=EditText(this);e.hint="How should Scrami speak?";e.setText(prefs.getString("style","friendly, confident, natural"));AlertDialog.Builder(this).setTitle("Scrami Profile").setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("style",e.text.toString()).apply()}.show()}
+    private fun speakLast(){val h=prefs.getString("history","")?:"";val last=h.substringAfterLast("ASSISTANT:").trim();if(last.isNotBlank())tts?.speak(last,TextToSpeech.QUEUE_FLUSH,null,"scrami")}
+    private fun startVoice(){if(ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){ActivityCompat.requestPermissions(this,arrayOf(Manifest.permission.RECORD_AUDIO),91);return};if(!SpeechRecognizer.isRecognitionAvailable(this)){Toast.makeText(this,"Speech recognition unavailable",Toast.LENGTH_SHORT).show();return};recognizer?.destroy();recognizer=SpeechRecognizer.createSpeechRecognizer(this);recognizer!!.setRecognitionListener(object:RecognitionListener{override fun onResults(b:Bundle){b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let{input.setText(it);input.setSelection(input.length)}};override fun onError(e:Int){Toast.makeText(this@MainActivity,"Voice error",Toast.LENGTH_SHORT).show()};override fun onReadyForSpeech(p:Bundle?){status.text="● LISTENING"};override fun onEndOfSpeech(){status.text="● READY"};override fun onBeginningOfSpeech(){};override fun onRmsChanged(v:Float){};override fun onBufferReceived(b:ByteArray?){};override fun onPartialResults(b:Bundle?){};override fun onEvent(t:Int,p:Bundle?){}});recognizer!!.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)})}
+    override fun onInit(s:Int){if(s==TextToSpeech.SUCCESS)tts?.language=Locale.getDefault()}
 
     private fun addBubble(text:String,user:Boolean):TextView{
         val tv=TextView(this).apply{
@@ -231,5 +266,6 @@ class MainActivity : AppCompatActivity() {
     private fun grad(c:IntArray,r:Float)=GradientDrawable(GradientDrawable.Orientation.TL_BR,c).apply{cornerRadius=dp(r).toFloat()}
     private fun dp(v:Int)= (v*resources.displayMetrics.density).roundToInt()
     private fun dp(v:Float)= (v*resources.displayMetrics.density).roundToInt()
-    override fun onDestroy(){super.onDestroy();val m=model;if(m!=null)lifecycleScope.launch(Dispatchers.IO){try{Llama.releaseModel(m)}catch(_:Exception){}}}
+    override fun onActivityResult(req:Int,res:Int,data:Intent?){super.onActivityResult(req,res,data);if(res==RESULT_OK&&data?.data!=null){lifecycleScope.launch(Dispatchers.IO){val t=try{contentResolver.openInputStream(data.data!!)?.bufferedReader()?.use{it.readText().take(10000)}?:""}catch(_:Exception){""};withContext(Dispatchers.Main){input.setText(if(t.isBlank())"Attachment selected. Ask Scrami what to do with it." else "Analyze this document:\n"+t);input.setSelection(input.length())}}}}
+    override fun onDestroy(){recognizer?.destroy();tts?.shutdown();super.onDestroy();val m=model;if(m!=null)lifecycleScope.launch(Dispatchers.IO){try{Llama.releaseModel(m)}catch(_:Exception){}}}
 }
