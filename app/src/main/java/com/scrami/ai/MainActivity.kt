@@ -25,8 +25,6 @@ import dev.ffmpegkit.llama.LlamaModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
@@ -39,7 +37,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var status: TextView
     private lateinit var progress: ProgressBar
     private lateinit var modelLabel: TextView
-    private val http = OkHttpClient()
     private val prefs by lazy { getSharedPreferences("scrami", MODE_PRIVATE) }
     private var model: LlamaModel? = null
     private val fileName = "qwen2.5-0.5b-instruct-q4_0.gguf"
@@ -159,48 +156,51 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         addContentView(overlay,FrameLayout.LayoutParams(-1,-1))
         overlay.alpha=0f
         overlay.animate().alpha(1f).setDuration(250).withEndAction{
-            overlay.animate().alpha(0f).setDuration(450).setStartDelay(450).withEndAction{
+            overlay.animate().alpha(0f).setDuration(220).setStartDelay(120).withEndAction{
                 (overlay.parent as? android.view.ViewGroup)?.removeView(overlay);ensureModel()
             }.start()
         }.start()
     }
 
     private fun ensureModel() {
-        val file=File(getExternalFilesDir("models"),fileName)
-        if(file.exists() && file.length()>100_000_000){ready(file);return}
-        modelLabel.text="Downloading local model • ~429 MB"
-        status.text="FIRST RUN • DOWNLOAD REQUIRED"
+        val file=File(filesDir,"models/$fileName")
+        if(file.exists() && file.length()>400_000_000L){ ready(file); return }
+        modelLabel.text="Preparing bundled local model…"
+        status.text="● LOCAL MODEL • PREPARING"
         lifecycleScope.launch(Dispatchers.IO){
             try{
                 file.parentFile?.mkdirs()
                 val part=File(file.absolutePath+".part")
-                http.newCall(Request.Builder().url(url).build()).execute().use{r->
-                    if(!r.isSuccessful) error("HTTP "+r.code)
-                    val body=r.body?:error("Empty download")
-                    val total=body.contentLength();var done=0L
-                    body.byteStream().use{ins->FileOutputStream(part).use{out->
-                        val buf=ByteArray(64*1024)
+                assets.open(fileName).use{ins->
+                    FileOutputStream(part).use{out->
+                        val buf=ByteArray(1024*1024)
+                        var done=0L
+                        val total=429_000_000L
                         while(true){
-                            val n=ins.read(buf);if(n<0)break
-                            out.write(buf,0,n);done+=n
-                            if(total>0)withContext(Dispatchers.Main){
-                                val pct=(done*100/total).toInt();progress.progress=pct
-                                modelLabel.text="Downloading local model • "+pct+"%"
+                            val n=ins.read(buf)
+                            if(n<0) break
+                            out.write(buf,0,n)
+                            done+=n
+                            if(done % (8L*1024*1024) < 1024*1024){
+                                withContext(Dispatchers.Main){
+                                    progress.progress=((done*100/total).coerceAtMost(99)).toInt()
+                                    modelLabel.text="Preparing bundled model • "+progress.progress+"%"
+                                }
                             }
                         }
-                    }}
+                    }
                 }
-                if(part.length()<100_000_000)error("Incomplete model")
+                if(part.length()<400_000_000L) error("Bundled model is incomplete")
                 if(file.exists())file.delete()
-                part.renameTo(file)
+                if(!part.renameTo(file)) error("Could not finalize bundled model")
                 withContext(Dispatchers.Main){progress.progress=100}
                 ready(file)
             }catch(e:Exception){
                 withContext(Dispatchers.Main){
-                    modelLabel.text="Download failed • tap here to retry"
-                    status.text="MODEL NOT READY"
+                    modelLabel.text="Local model error • tap to retry"
+                    status.text="● MODEL ERROR"
                     modelLabel.setOnClickListener{ensureModel()}
-                    Toast.makeText(this@MainActivity,e.message?:"Download error",Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity,e.message?:"Model preparation error",Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -243,7 +243,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun modeName(m:String)=when(m){"FAST"->"⚡ FAST";"SMART"->"🧠 SMART";"CREATIVE"->"🎨 CREATIVE";"CODE"->"💻 CODE";else->"📚 STUDY"}
-    private fun buildModeRow(row:LinearLayout){row.removeAllViews();listOf("FAST","SMART","CREATIVE","CODE","STUDY").forEach{m->row.addView(TextView(this).apply{text=modeName(m);textSize=10f;gravity=Gravity.CENTER;setPadding(dp(12),0,dp(12),0);setTextColor(if(m==currentMode)Color.BLACK else Color.WHITE);background=rounded(if(m==currentMode)Color.WHITE else Color.rgb(20,21,26),18f,Color.TRANSPARENT);setOnClickListener{currentMode=m;buildModeRow(row)}},LinearLayout.LayoutParams(dp(105),dp(34)).apply{rightMargin=dp(6)})}}
+    private fun buildModeRow(row:LinearLayout){row.removeAllViews();listOf("FAST","SMART","CREATIVE","CODE","STUDY").forEach{m->row.addView(TextView(this).apply{text=modeName(m);textSize=10f;gravity=Gravity.CENTER;setPadding(dp(12),0,dp(12),0);setTextColor(if(m==currentMode)Color.BLACK else Color.rgb(90,90,96));background=rounded(if(m==currentMode)Color.rgb(242,242,245) else Color.rgb(250,250,252),18f,Color.rgb(230,230,234));setOnClickListener{currentMode=m;buildModeRow(row)}},LinearLayout.LayoutParams(dp(105),dp(34)).apply{rightMargin=dp(6)})}}
     private fun systemPromptForMode()=when(currentMode){"FAST"->"Ты Scrami AI FAST. Отвечай максимально быстро и кратко."; "CREATIVE"->"Ты Scrami AI CREATIVE. Ты креативный автор: музыка, тексты, идеи."; "CODE"->"Ты Scrami AI CODE. Ты senior программист. Давай рабочий код."; "STUDY"->"Ты Scrami AI STUDY. Объясняй школьные темы просто и с примерами."; else->"Ты Scrami AI SMART — личный помощник. Отвечай естественно и полезно. Если не знаешь — честно скажи."}
     private fun showTools(){PopupMenu(this,send).apply{menu.add("＋ New chat");menu.add("💬 History");menu.add("🔎 Search");menu.add("🌐 Web");menu.add("📁 File");menu.add("🧮 Calculator");menu.add("🎨 Profile");menu.add("🔊 Read last answer");setOnMenuItemClickListener{when(it.title.toString()){"＋ New chat"->newChat();"💬 History"->showHistory();"🔎 Search"->searchHistory();"🌐 Web"->openWeb();"📁 File"->pickFile();"🧮 Calculator"->calculator();"🎨 Profile"->profile();"🔊 Read last answer"->speakLast()};true};show()}}
     private fun showHistory(){AlertDialog.Builder(this).setTitle("Chat history").setMessage((prefs.getString("history","")?:"").takeLast(5000).ifBlank{"No saved messages yet."}).setPositiveButton("OK",null).show()}
@@ -281,7 +281,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
     private fun newChat() {
         chat.removeAllViews()
-        prefs.edit().clear().apply()
+        prefs.edit().remove("history").remove("visual").apply()
         addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.", false)
     }
     private fun saveVisual() {
