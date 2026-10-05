@@ -12,7 +12,7 @@
     </ScrollView>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:layout_marginTop="10dp">
         <EditText android:id="@+id/messageInput" android:layout_width="0dp" android:layout_height="52dp" android:layout_weight="1"
-            android:background="@drawable/input_bg" android:hint="Напиши Scrami AI..." android:hintTextColor="@color/scrami_muted"
+            android:background="@drawable/input_bg" android:hint="Напиши Scrami AI..."
             android:textColor="@color/scrami_text" android:inputType="textCapSentences|textMultiLine" android:maxLines="4" />
         <Button android:id="@+id/sendButton" android:layout_width="62dp" android:layout_height="52dp" android:layout_marginStart="8dp" android:text="➤" android:textSize="20sp" />
     </LinearLayout>
