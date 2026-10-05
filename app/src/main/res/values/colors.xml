@@ -1,1 +1,7 @@
-<resources><color name="scrami_bg">#08090D</color><color name="scrami_panel">#12131A</color><color name="scrami_accent">#9A53FF</color><color name="scrami_text">#F7F4FF</color><color name="scrami_muted">#9A96A8</color></resources>
+<resources>
+<color name="scrami_bg">#050608</color>
+<color name="scrami_panel">#121317</color>
+<color name="scrami_accent">#FFFFFF</color>
+<color name="scrami_text">#FFFFFF</color>
+<color name="scrami_muted">#9A9AA2</color>
+</resources>
