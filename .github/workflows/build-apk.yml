@@ -32,6 +32,9 @@ jobs:
           test "$(stat -c%s app/src/main/assets/qwen2.5-0.5b-instruct-q4_0.gguf)" -gt 400000000
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
+      - name: Static security checks
+        run: |
+          ! grep -RniE 'http://|android:allowBackup="true"|usesCleartextTraffic="true"|SECRET|api[_-]?key' app/src/main || (echo "Security check failed"; exit 1)
       - name: Verify APK exists
         run: ls -lh app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
