@@ -5,7 +5,7 @@ plugins {
 android {
     namespace = "com.scrami.ai"
     compileSdk = 35
-    packaging { resources { noCompress += "gguf" } }
+    androidResources { noCompress += listOf("gguf") }
     defaultConfig {
         applicationId = "com.scrami.ai"
         minSdk = 26
