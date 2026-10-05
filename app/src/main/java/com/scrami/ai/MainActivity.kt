@@ -57,69 +57,93 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun buildUi() {
-        val root = LinearLayout(this).apply {
+        val root = FrameLayout(this).apply { setBackgroundColor(Color.WHITE) }
+        val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(12))
-            setBackgroundColor(Color.rgb(8, 9, 13))
+            setPadding(dp(14), dp(10), dp(14), dp(8))
+            setBackgroundColor(Color.WHITE)
         }
-
-        val header = LinearLayout(this).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(4), 0, dp(10))
-        }
+        val header = LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL; setPadding(0,dp(4),0,dp(8)) }
         val mark = TextView(this).apply {
-            text = "S"; gravity = Gravity.CENTER; textSize = 19f
-            typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE)
-            background = grad(intArrayOf(Color.rgb(171,88,255), Color.rgb(70,42,145)), 18f)
+            text="S";gravity=Gravity.CENTER;textSize=18f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK)
+            background=rounded(Color.WHITE,16f,Color.rgb(220,220,224))
         }
-        header.addView(mark, LinearLayout.LayoutParams(dp(42), dp(42)))
+        header.addView(mark,LinearLayout.LayoutParams(dp(40),dp(40)))
+        val titleBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),0,0,0)}
+        titleBox.addView(TextView(this).apply{text="Scrami AI";textSize=18f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK)})
+        status=TextView(this).apply{text="PRIVATE • LOCAL • FREE";textSize=9f;setTextColor(Color.rgb(105,105,112));letterSpacing=.08f}
+        titleBox.addView(status)
+        header.addView(titleBox,LinearLayout.LayoutParams(0,-2,1f))
+        header.addView(TextView(this).apply{text="☰";textSize=22f;gravity=Gravity.CENTER;setTextColor(Color.BLACK);setOnClickListener{showTools()}},LinearLayout.LayoutParams(dp(44),dp(42)))
+        main.addView(header)
 
-        val names = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12),0,0,0) }
-        names.addView(TextView(this).apply { text="Scrami AI"; textSize=19f; typeface=Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE) })
-        status = TextView(this).apply { text="PRIVATE • LOCAL • FREE"; textSize=10f; setTextColor(Color.rgb(150,145,168)); letterSpacing=.08f }
-        names.addView(status)
-        header.addView(names, LinearLayout.LayoutParams(0,-2,1f))
-        header.addView(TextView(this).apply {
-            text="☰"; textSize=22f; gravity=Gravity.CENTER; setTextColor(Color.WHITE); setOnClickListener{showTools()}
-        }, LinearLayout.LayoutParams(dp(48),dp(44)))
-        root.addView(header)
-        val modeScroll = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
-        val modeRow = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-        buildModeRow(modeRow); modeScroll.addView(modeRow)
-        root.addView(modeScroll, LinearLayout.LayoutParams(-1,dp(44)))
+        val modeScroll=HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false}
+        val modeRow=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
+        buildModeRow(modeRow);modeScroll.addView(modeRow)
+        main.addView(modeScroll,LinearLayout.LayoutParams(-1,dp(42)))
 
-        val scroll = ScrollView(this).apply { isFillViewport=true; setPadding(0,dp(8),0,dp(8)) }
-        chat = LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(0,dp(8),0,dp(8)) }
-        scroll.addView(chat)
-        root.addView(scroll, LinearLayout.LayoutParams(-1,0,1f))
+        val scroll=ScrollView(this).apply{isFillViewport=true;setPadding(0,dp(4),0,dp(4))}
+        chat=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(0,dp(8),0,dp(8))}
+        scroll.addView(chat);main.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
 
-        val card = LinearLayout(this).apply {
-            orientation=LinearLayout.VERTICAL; setPadding(dp(14),dp(8),dp(14),dp(8))
-            background=rounded(Color.rgb(18,19,26),18f,Color.rgb(38,39,50))
+        val composer=LinearLayout(this).apply{gravity=Gravity.BOTTOM;setPadding(0,dp(4),0,dp(2))}
+        val plus=TextView(this).apply{
+            text="＋";textSize=27f;gravity=Gravity.CENTER;setTextColor(Color.BLACK)
+            background=rounded(Color.rgb(247,247,249),28f,Color.rgb(225,225,229));setOnClickListener{showAttachMenu()}
         }
-        modelLabel=TextView(this).apply{text="Preparing local model…";textSize=12f;setTextColor(Color.rgb(197,192,214))}
-        progress=ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal).apply{max=100}
-        card.addView(modelLabel)
-        card.addView(progress,LinearLayout.LayoutParams(-1,dp(4)))
-        root.addView(card,LinearLayout.LayoutParams(-1,dp(52)).apply{bottomMargin=dp(8)})
-
-        val composer=LinearLayout(this).apply{gravity=Gravity.BOTTOM}
+        composer.addView(plus,LinearLayout.LayoutParams(dp(54),dp(56)))
         input=EditText(this).apply{
-            hint="Message Scrami…";setHintTextColor(Color.rgb(115,111,129));setTextColor(Color.WHITE);textSize=16f
-            setPadding(dp(16),dp(12),dp(12),dp(12));background=rounded(Color.rgb(20,21,29),24f,Color.rgb(43,44,56));maxLines=5
+            hint="Message Scrami…";setHintTextColor(Color.rgb(145,145,150));setTextColor(Color.BLACK);textSize=16f
+            setPadding(dp(15),dp(10),dp(12),dp(10));background=rounded(Color.rgb(247,247,249),25f,Color.rgb(225,225,229));maxLines=5
         }
-        composer.addView(input,LinearLayout.LayoutParams(0,dp(56),1f))
-        val mic = TextView(this).apply { text="🎙"; textSize=19f; gravity=Gravity.CENTER; setTextColor(Color.WHITE); background=rounded(Color.rgb(20,21,26),28f,Color.rgb(45,46,54)); setOnClickListener { startVoice() } }
+        composer.addView(input,LinearLayout.LayoutParams(0,dp(56),1f).apply{leftMargin=dp(7)})
+        val mic=TextView(this).apply{
+            text="🎙";textSize=18f;gravity=Gravity.CENTER;setTextColor(Color.BLACK);background=rounded(Color.rgb(247,247,249),28f,Color.rgb(225,225,229));setOnClickListener{startVoice()}
+            setOnLongClickListener{startVoice();true}
+        }
         composer.addView(mic,LinearLayout.LayoutParams(dp(52),dp(56)).apply{leftMargin=dp(6)})
-        send=TextView(this).apply{
-            text="↑";gravity=Gravity.CENTER;textSize=24f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE)
-            background=grad(intArrayOf(Color.rgb(154,83,255),Color.rgb(104,56,210)),28f);setOnClickListener{sendMessage()}
-        }
-        composer.addView(send,LinearLayout.LayoutParams(dp(56),dp(56)).apply{leftMargin=dp(8)})
-        root.addView(composer)
+        send=TextView(this).apply{text="↑";gravity=Gravity.CENTER;textSize=23f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);background=rounded(Color.BLACK,28f,Color.TRANSPARENT);setOnClickListener{sendMessage()}}
+        composer.addView(send,LinearLayout.LayoutParams(dp(56),dp(56)).apply{leftMargin=dp(6)})
+        main.addView(composer)
+
+        modelLabel=TextView(this).apply{text="Preparing local model…";textSize=10f;setTextColor(Color.rgb(120,120,125));gravity=Gravity.CENTER}
+        progress=ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal).apply{max=100}
+        val modelBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;addView(modelLabel);addView(progress,LinearLayout.LayoutParams(-1,dp(3)))}
+        main.addView(modelBox,LinearLayout.LayoutParams(-1,dp(30)))
+
+        root.addView(main,FrameLayout.LayoutParams(-1,-1))
+        val side=buildSidebar()
+        root.addView(side,FrameLayout.LayoutParams(dp(310),-1).apply{gravity=Gravity.START;leftMargin=-dp(310)})
+        installSwipe(root,side)
         setContentView(root)
     }
 
+    private fun buildSidebar():LinearLayout{
+        val side=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(18),dp(34),dp(12),dp(12));setBackgroundColor(Color.WHITE)}
+        side.addView(TextView(this).apply{text="Scrami";textSize=22f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK);setPadding(0,0,0,dp(18))})
+        side.addView(TextView(this).apply{text="＋  New chat";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{newChat()}})
+        side.addView(TextView(this).apply{text="⌕  Search";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{searchHistory()}})
+        side.addView(TextView(this).apply{text="▣  Chats";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{showHistory()}})
+        side.addView(TextView(this).apply{text="🧠  Memory";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{showMemory()}})
+        side.addView(TextView(this).apply{text="👤  Account";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{accountDialog()}})
+        side.addView(TextView(this).apply{text="🎨  Image Lab";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{imageLab()}})
+        side.addView(Space(this),LinearLayout.LayoutParams(1,0,1f))
+        side.addView(TextView(this).apply{text="SCRAMI AI  •  v4";textSize=10f;setTextColor(Color.rgb(140,140,145))})
+        return side
+    }
+
+    private fun installSwipe(root:FrameLayout,side:LinearLayout){
+        var downX=0f
+        root.setOnTouchListener{_,e->
+            when(e.action){android.view.MotionEvent.ACTION_DOWN->{downX=e.x;true};android.view.MotionEvent.ACTION_UP->{val dx=e.x-downX;if(dx>80){side.animate().translationX(dp(310).toFloat()).setDuration(180).start()}else if(dx < -80){side.animate().translationX(0f).setDuration(180).start()};true};else->true}
+        }
+    }
+
+    private fun showAttachMenu(){PopupMenu(this,send).apply{menu.add("📷 Photo");menu.add("📁 File");menu.add("🎨 Image generation");menu.add("✏️ Edit image");menu.add("📎 Document");setOnMenuItemClickListener{when(it.title.toString()){"📷 Photo"->pickImage(); "📁 File"->pickFile(); "🎨 Image generation"->imageLab(); "✏️ Edit image"->imageLab(); "📎 Document"->pickFile()};true};show()}}
+    private fun pickImage(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="image/*";addCategory(Intent.CATEGORY_OPENABLE)},45)}
+    private fun showMemory(){val m=prefs.getString("memory","")?:"";AlertDialog.Builder(this).setTitle("Scrami Memory").setMessage(if(m.isBlank())"Memory is empty. Say: “remember that …”" else m).setPositiveButton("Add"){_,_->val e=EditText(this);e.hint="What should Scrami remember?";AlertDialog.Builder(this).setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("memory",(m+"\n"+e.text.toString()).trim()).apply()}.setNegativeButton("Cancel",null).show()}.setNegativeButton("Clear"){_,_->prefs.edit().remove("memory").apply()}.show()}
+    private fun accountDialog(){val current=prefs.getString("account","Scrami User")?:"Scrami User";val e=EditText(this);e.setText(current);e.hint="Account name";AlertDialog.Builder(this).setTitle("Scrami Account").setMessage("Local account on this device. Cloud sign-in can be connected later.").setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("account",e.text.toString().ifBlank{"Scrami User"}).apply();Toast.makeText(this,"Account saved",Toast.LENGTH_SHORT).show()}.setNegativeButton("Cancel",null).show()}
+    private fun imageLab(){val e=EditText(this);e.hint="Example: remove the person in the background";e.setText(input.text);AlertDialog.Builder(this).setTitle("SCRAMI IMAGE LAB").setMessage("Describe exactly what to create or change. The UI is ready for a connected image model/provider. Image generation/editing itself requires an image model backend; I won't pretend the offline 0.5B model can do pixel editing.").setView(e).setPositiveButton("Create / edit"){_,_->input.setText(e.text.toString());Toast.makeText(this,"Image task prepared — connect an image model in Settings.",Toast.LENGTH_LONG).show()}.setNegativeButton("Cancel",null).show()}
     private fun splash() {
         val overlay=FrameLayout(this).apply{setBackgroundColor(Color.rgb(8,9,13))}
         val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER}
@@ -198,7 +222,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         lifecycleScope.launch(Dispatchers.IO){
             try{
                 val history=prefs.getString("history","")?:""
-                val prompt=if(history.isBlank())text else history.takeLast(8000)+"\nUSER: "+text+"\nASSISTANT:"
+                if(text.lowercase().startsWith("remember ")){val m=prefs.getString("memory","")?:"";prefs.edit().putString("memory",(m+"\n"+text.substring(9).trim()).trim()).apply()}
+                val memory=prefs.getString("memory","")?:""
+                val prompt=if(history.isBlank())text else "MEMORY:\n"+memory.takeLast(3000)+"\n"+history.takeLast(7000)+"\nUSER: "+text+"\nASSISTANT:"
                 val result=Llama.complete(loaded,prompt=prompt,systemPrompt=systemPromptForMode(),maxTokens=if(currentMode=="FAST")220 else 480)
                 val answer=result.text.trim().ifBlank{"Не смог сформировать ответ."}
                 prefs.edit().putString("history",(history+"\nUSER: "+text+"\nASSISTANT: "+answer).takeLast(12000)).apply()
@@ -267,6 +293,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun grad(c:IntArray,r:Float)=GradientDrawable(GradientDrawable.Orientation.TL_BR,c).apply{cornerRadius=dp(r).toFloat()}
     private fun dp(v:Int)= (v*resources.displayMetrics.density).roundToInt()
     private fun dp(v:Float)= (v*resources.displayMetrics.density).roundToInt()
-    override fun onActivityResult(req:Int,res:Int,data:Intent?){super.onActivityResult(req,res,data);if(res==RESULT_OK&&data?.data!=null){lifecycleScope.launch(Dispatchers.IO){val t=try{contentResolver.openInputStream(data.data!!)?.bufferedReader()?.use{it.readText().take(10000)}?:""}catch(_:Exception){""};withContext(Dispatchers.Main){input.setText(if(t.isBlank())"Attachment selected. Ask Scrami what to do with it." else "Analyze this document:\n"+t);input.setSelection(input.length())}}}}
+    override fun onActivityResult(req:Int,res:Int,data:Intent?){super.onActivityResult(req,res,data);if(res==RESULT_OK&&data?.data!=null){lifecycleScope.launch(Dispatchers.IO){val t=try{contentResolver.openInputStream(data.data!!)?.bufferedReader()?.use{it.readText().take(10000)}?:""}catch(_:Exception){""};withContext(Dispatchers.Main){input.setText(if(t.isBlank())"Attachment selected. Ask Scrami what to do with it." else "Analyze this document:\n"+t);input.setSelection(input.text.length)}}}}
     override fun onDestroy(){recognizer?.destroy();tts?.shutdown();super.onDestroy();val m=model;if(m!=null)lifecycleScope.launch(Dispatchers.IO){try{Llama.releaseModel(m)}catch(_:Exception){}}}
 }
