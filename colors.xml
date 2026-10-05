@@ -1,0 +1,7 @@
+
+<resources>
+    <color name="scrami_bg">#111111</color>
+    <color name="scrami_panel">#1B1B1B</color>
+    <color name="scrami_text">#F2F2F2</color>
+    <color name="scrami_muted">#AAAAAA</color>
+</resources>
