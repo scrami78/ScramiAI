@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import dev.ffmpegkit.llama.Llama
 import dev.ffmpegkit.llama.LlamaConfig
+import dev.ffmpegkit.llama.LlamaModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,7 +29,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var modelLabel: TextView
     private val http = OkHttpClient()
     private val prefs by lazy { getSharedPreferences("scrami", MODE_PRIVATE) }
-    private var model: Any? = null
+    private var model: LlamaModel? = null
     private val fileName = "qwen2.5-0.5b-instruct-q4_0.gguf"
     private val url = "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf"
 
@@ -195,7 +196,7 @@ class MainActivity : AppCompatActivity() {
             background=if(user)rounded(Color.rgb(103,59,191),20f,Color.TRANSPARENT)else rounded(Color.rgb(25,26,34),20f,Color.rgb(39,40,50))
         }
         val row=LinearLayout(this).apply{gravity=if(user)Gravity.END else Gravity.START;setPadding(0,dp(5),0,dp(5));tag=user}
-        row.addView(tv,LinearLayout.LayoutParams((resources.displayMetrics.widthPixels*if(user).82f else .9f).roundToInt(),-2))
+        row.addView(tv,LinearLayout.LayoutParams((resources.displayMetrics.widthPixels*if (user) .82f else .9f).roundToInt(),-2))
         chat.addView(row)
         return tv
     }
