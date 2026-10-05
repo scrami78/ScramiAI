@@ -1,191 +1,146 @@
-
 package com.scrami.ai
 
-import android.app.AlertDialog
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
-import android.text.InputType
+import android.view.Gravity
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
-import org.json.JSONObject
-import java.nio.charset.StandardCharsets
-import java.util.Base64
-import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
-import javax.crypto.spec.GCMParameterSpec
+import androidx.lifecycle.lifecycleScope
+import dev.ffmpegkit.llama.Llama
+import dev.ffmpegkit.llama.LlamaConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.File
+import java.io.FileOutputStream
+import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var chatText: TextView
+    private lateinit var root: LinearLayout
+    private lateinit var chat: LinearLayout
     private lateinit var input: EditText
-    private lateinit var scroll: ScrollView
-    private val client = OkHttpClient()
+    private lateinit var send: TextView
+    private lateinit var status: TextView
+    private lateinit var modelProgress: ProgressBar
+    private lateinit var modelLabel: TextView
+    private val http = OkHttpClient()
     private val prefs by lazy { getSharedPreferences("scrami", MODE_PRIVATE) }
-    private val apiUrl = "https://api.openai.com/v1/responses"
-    private val keyAlias = "scrami_api_key"
+    private var model: Any? = null
+    private val modelFileName = "qwen2.5-0.5b-instruct-q4_0.gguf"
+    private val modelUrl = "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        chatText = findViewById(R.id.chatText)
-        input = findViewById(R.id.messageInput)
-        scroll = findViewById(R.id.scroll)
-
-        findViewById<Button>(R.id.settingsButton).setOnClickListener { showSettings() }
-        findViewById<Button>(R.id.sendButton).setOnClickListener { sendMessage() }
-
-        chatText.text = prefs.getString("chat", "Йоу. Я Scrami AI.\nНастрой API-ключ и напиши мне.") ?: ""
+        buildUi()
+        loadSavedChat()
+        showSplash()
     }
 
-    private fun model(): String = prefs.getString("model", "gpt-5-mini") ?: "gpt-5-mini"
-
-    private fun showSettings() {
-        val box = LinearLayout(this).apply {
+    private fun buildUi() {
+        root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(40, 10, 40, 0)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setBackgroundColor(Color.rgb(8, 9, 13))
         }
-
-        val key = EditText(this).apply {
-            hint = "OpenAI API key"
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-            setText(decrypt(prefs.getString("key_blob", "") ?: ""))
+        val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(0, dp(4), 0, dp(10)) }
+        val logo = TextView(this).apply {
+            text = "S"; gravity = Gravity.CENTER; textSize = 19f; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE); background = gradient(intArrayOf(Color.rgb(154,83,255), Color.rgb(74,45,150)), 18f)
         }
-        val model = EditText(this).apply {
-            hint = "Модель"
-            setText(model())
+        header.addView(logo, LinearLayout.LayoutParams(dp(42), dp(42)))
+        val titleBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12),0,0,0) }
+        val title = TextView(this).apply { text = "Scrami AI"; textSize = 19f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE) }
+        status = TextView(this).apply { text = "PRIVATE • LOCAL • FREE"; textSize = 10f; setTextColor(Color.rgb(158,153,174)); letterSpacing = 0.08f }
+        titleBox.addView(title); titleBox.addView(status)
+        header.addView(titleBox, LinearLayout.LayoutParams(0,-2,1f))
+        val newChat = TextView(this).apply { text = "＋"; textSize = 25f; gravity = Gravity.CENTER; setTextColor(Color.WHITE); setOnClickListener { newChat() } }
+        header.addView(newChat, LinearLayout.LayoutParams(dp(48),dp(44)))
+        root.addView(header)
+        root.addView(View(this).apply { setBackgroundColor(Color.rgb(30,31,40)) }, LinearLayout.LayoutParams(-1,dp(1)))
+        val scroll = ScrollView(this).apply { isFillViewport = true; setPadding(0,dp(8),0,dp(8)); clipToPadding = false }
+        chat = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0,dp(8),0,dp(8)) }
+        scroll.addView(chat); root.addView(scroll, LinearLayout.LayoutParams(-1,0,1f))
+        val modelCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14),dp(10),dp(14),dp(10)); background = rounded(Color.rgb(18,19,26),18f,Color.rgb(38,39,50)) }
+        modelLabel = TextView(this).apply { text = "Preparing local model…"; textSize = 12f; setTextColor(Color.rgb(197,192,214)) }
+        modelProgress = ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal).apply { max=100; progress=0 }
+        modelCard.addView(modelLabel); modelCard.addView(modelProgress,LinearLayout.LayoutParams(-1,dp(4)))
+        root.addView(modelCard,LinearLayout.LayoutParams(-1,dp(54)).apply { bottomMargin=dp(8) })
+        val composer = LinearLayout(this).apply { gravity=Gravity.BOTTOM }
+        input = EditText(this).apply {
+            hint="Message Scrami…"; hintTextColor=Color.rgb(115,111,129); setTextColor(Color.WHITE); textSize=16f
+            setPadding(dp(16),dp(12),dp(12),dp(12)); background=rounded(Color.rgb(20,21,29),24f,Color.rgb(43,44,56)); maxLines=5; minLines=1
         }
-        box.addView(key)
-        box.addView(model)
-
-        AlertDialog.Builder(this)
-            .setTitle("Настройки Scrami AI")
-            .setMessage("Ключ сохраняется на устройстве в зашифрованном виде. Не отправляй его в чат.")
-            .setView(box)
-            .setNegativeButton("Отмена", null)
-            .setPositiveButton("Сохранить") { _, _ ->
-                val k = key.text.toString().trim()
-                if (k.isNotEmpty()) prefs.edit().putString("key_blob", encrypt(k)).apply()
-                prefs.edit().putString("model", model.text.toString().trim()).apply()
-                Toast.makeText(this, "Настройки сохранены", Toast.LENGTH_SHORT).show()
-            }.show()
+        composer.addView(input,LinearLayout.LayoutParams(0,dp(56),1f))
+        send = TextView(this).apply {
+            text="↑"; gravity=Gravity.CENTER; textSize=24f; typeface=Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE)
+            background=gradient(intArrayOf(Color.rgb(154,83,255),Color.rgb(104,56,210)),28f); setOnClickListener { sendMessage() }
+        }
+        composer.addView(send,LinearLayout.LayoutParams(dp(56),dp(56)).apply { leftMargin=dp(8) }); root.addView(composer)
+        setContentView(root)
     }
 
-    private fun sendMessage() {
-        val text = input.text.toString().trim()
-        if (text.isEmpty()) return
-        val apiKey = decrypt(prefs.getString("key_blob", "") ?: "")
-        if (apiKey.isBlank()) {
-            showSettings()
-            return
-        }
+    private fun showSplash() {
+        val overlay = FrameLayout(this).apply { setBackgroundColor(Color.rgb(8,9,13)) }
+        val box = LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER }
+        val mark = TextView(this).apply { text="S"; gravity=Gravity.CENTER; textSize=48f; typeface=Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); background=gradient(intArrayOf(Color.rgb(172,91,255),Color.rgb(75,45,154)),32f) }
+        box.addView(mark,LinearLayout.LayoutParams(dp(96),dp(96)))
+        box.addView(TextView(this).apply { text="SCRAMI AI"; textSize=28f; typeface=Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); gravity=Gravity.CENTER; setPadding(0,dp(18),0,dp(4)); letterSpacing=0.12f })
+        box.addView(TextView(this).apply { text="YOUR AI. YOUR DEVICE."; textSize=11f; setTextColor(Color.rgb(145,139,160)); gravity=Gravity.CENTER; letterSpacing=0.14f })
+        overlay.addView(box,FrameLayout.LayoutParams(-1,-1)); addContentView(overlay,FrameLayout.LayoutParams(-1,-1))
+        overlay.alpha=0f
+        overlay.animate().alpha(1f).setDuration(250).withEndAction { overlay.animate().alpha(0f).setDuration(500).setStartDelay(450).withEndAction { (overlay.parent as? android.view.ViewGroup)?.removeView(overlay); ensureModel() }.start() }.start()
+    }
 
-        append("\n\nТы: $text\nScrami AI: думаю…")
-        input.setText("")
-
-        Thread {
+    private fun ensureModel() {
+        val file=File(getExternalFilesDir("models"),modelFileName)
+        if(file.exists() && file.length()>100_000_000){ modelLabel.text="LOCAL MODEL READY"; status.text="● ON-DEVICE • NO API"; status.setTextColor(Color.rgb(107,220,150)); loadModel(file); return }
+        modelLabel.text="Downloading local model • ~429 MB"; status.text="FIRST RUN • DOWNLOAD REQUIRED"
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val body = JSONObject().apply {
-                    put("model", model())
-                    put("instructions", """
-                        Ты — Scrami AI, личный ИИ пользователя.
-                        Отвечай по-русски, естественно и дружелюбно.
-                        Помогай с учёбой, творчеством, программированием и повседневными задачами.
-                        Не выдумывай факты и честно говори об ограничениях.
-                    """.trimIndent())
-                    put("input", text)
+                file.parentFile?.mkdirs(); val tmp=File(file.absolutePath+".part"); val response=http.newCall(Request.Builder().url(modelUrl).build()).execute()
+                response.use { if(!it.isSuccessful) error("Download failed: HTTP ${it.code}"); val body=it.body?:error("Empty download"); val total=body.contentLength(); var done=0L
+                    body.byteStream().use { ins -> FileOutputStream(tmp).use { out -> val buffer=ByteArray(64*1024); while(true){ val n=ins.read(buffer); if(n<0) break; out.write(buffer,0,n); done+=n; if(total>0){ val pct=(done*100/total).toInt(); withContext(Dispatchers.Main){ modelProgress.progress=pct; modelLabel.text="Downloading local model • $pct%" } } } } }
                 }
-
-                val request = Request.Builder()
-                    .url(apiUrl)
-                    .addHeader("Authorization", "Bearer $apiKey")
-                    .addHeader("Content-Type", "application/json")
-                    .post(body.toString().toRequestBody("application/json".toMediaType()))
-                    .build()
-
-                client.newCall(request).execute().use { response ->
-                    val raw = response.body?.string() ?: ""
-                    if (!response.isSuccessful) throw Exception("API ${response.code}: $raw")
-                    val answer = extractText(JSONObject(raw))
-                    runOnUiThread {
-                        replaceThinking(answer)
-                    }
-                }
-            } catch (e: Exception) {
-                runOnUiThread { replaceThinking("Ошибка: ${e.message}") }
-            }
-        }.start()
-    }
-
-    private fun extractText(obj: JSONObject): String {
-        val direct = obj.optString("output_text")
-        if (direct.isNotBlank()) return direct
-        val output = obj.optJSONArray("output") ?: return "Не удалось получить ответ."
-        val parts = StringBuilder()
-        for (i in 0 until output.length()) {
-            val item = output.optJSONObject(i) ?: continue
-            val content = item.optJSONArray("content") ?: continue
-            for (j in 0 until content.length()) {
-                val c = content.optJSONObject(j) ?: continue
-                val t = c.optString("text")
-                if (t.isNotBlank()) parts.append(t)
-            }
+                if(tmp.length()<100_000_000) error("Downloaded model is incomplete"); if(file.exists()) file.delete(); tmp.renameTo(file)
+                withContext(Dispatchers.Main){ modelProgress.progress=100; modelLabel.text="LOCAL MODEL READY"; status.text="● ON-DEVICE • NO API"; status.setTextColor(Color.rgb(107,220,150)) }
+                loadModel(file)
+            } catch(e:Exception){ withContext(Dispatchers.Main){ modelLabel.text="Model download failed — tap bar to retry"; status.text="OFFLINE MODEL NOT READY"; Toast.makeText(this@MainActivity,e.message?:"Download error",Toast.LENGTH_LONG).show(); modelProgress.setOnClickListener{ensureModel()} } }
         }
-        return parts.toString().ifBlank { "Пустой ответ." }
     }
 
-    private fun append(s: String) {
-        chatText.append(s)
-        prefs.edit().putString("chat", chatText.text.toString()).apply()
-        scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
+    private fun loadModel(file:File){ lifecycleScope.launch(Dispatchers.IO){ try { val loaded=Llama.loadModel(modelPath=file.absolutePath,config=LlamaConfig(contextSize=2048,threads=maxOf(2,Runtime.getRuntime().availableProcessors()/2))); model=loaded; withContext(Dispatchers.Main){ modelLabel.text="LOCAL MODEL READY • QWEN 0.5B"; status.text="● READY • PRIVATE • FREE" } } catch(e:Exception){ withContext(Dispatchers.Main){ modelLabel.text="Model could not be loaded"; Toast.makeText(this@MainActivity,e.message?:"Model error",Toast.LENGTH_LONG).show() } } } }
+
+    private fun sendMessage(){
+        val text=input.text.toString().trim(); if(text.isEmpty()) return
+        val loaded=model?:run{Toast.makeText(this,"Модель ещё загружается. Подожди немного.",Toast.LENGTH_SHORT).show();return}
+        input.setText(""); addBubble(text,true); val thinking=addBubble("Думаю…",false); send.isEnabled=false; status.text="● THINKING LOCALLY"
+        lifecycleScope.launch(Dispatchers.IO){ try {
+            val history=prefs.getString("history","")?:""; val prompt=buildPrompt(history,text)
+            val result=Llama.complete(loaded,prompt=prompt,systemPrompt="Ты — Scrami AI, стильный личный помощник. Отвечай естественно, полезно и по делу. В основном отвечай на русском. Не утверждай, что ты ChatGPT. Если не знаешь — честно скажи.",maxTokens=384)
+            val answer=result.text.trim().ifBlank{"Не смог сформировать ответ."}; val newHistory=(history+"\nUSER: "+text+"\nASSISTANT: "+answer).takeLast(12000); prefs.edit().putString("history",newHistory).apply()
+            withContext(Dispatchers.Main){ thinking.text=answer; thinking.background=rounded(Color.rgb(25,26,34),20f,Color.rgb(39,40,50)); status.text="● READY • PRIVATE"; send.isEnabled=true; saveChatVisual() }
+        } catch(e:Exception){ withContext(Dispatchers.Main){ thinking.text="Ошибка локальной модели: ${e.message?:"unknown"}"; status.text="● READY • CHECK MODEL"; send.isEnabled=true } } }
     }
 
-    private fun replaceThinking(answer: String) {
-        val current = chatText.text.toString()
-        val idx = current.lastIndexOf("Scrami AI: думаю…").takeIf { it >= 0 }
-            ?: current.lastIndexOf("Scrami AI: думая…")
-        val fixed = if (idx >= 0) current.substring(0, idx) + "Scrami AI: $answer" else current + "\nScrami AI: $answer"
-        chatText.text = fixed
-        prefs.edit().putString("chat", fixed).apply()
-        scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
+    private fun buildPrompt(history:String,current:String)=if(history.isBlank()) current else history.takeLast(8000)+"\nUSER: "+current+"\nASSISTANT:"
+
+    private fun addBubble(text:String,user:Boolean):TextView{
+        val tv=TextView(this).apply{ this.text=text; textSize=16f; setTextColor(Color.WHITE); setPadding(dp(16),dp(12),dp(16),dp(12)); setLineSpacing(0f,1.08f); background=if(user) rounded(Color.rgb(103,59,191),20f,Color.TRANSPARENT) else rounded(Color.rgb(25,26,34),20f,Color.rgb(39,40,50)) }
+        val row=LinearLayout(this).apply{ gravity=if(user) Gravity.END else Gravity.START; setPadding(0,dp(5),0,dp(5)); tag=user }
+        row.addView(tv,LinearLayout.LayoutParams((resources.displayMetrics.widthPixels*if(user)0.82f else 0.9f).roundToInt(),-2)); chat.addView(row); return tv
     }
 
-    private fun getOrCreateKey(): SecretKey {
-        val ks = java.security.KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        if (!ks.containsAlias(keyAlias)) {
-            val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
-            gen.init(KeyGenParameterSpec.Builder(
-                keyAlias,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            ).setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-             .build())
-            gen.generateKey()
-        }
-        return (ks.getEntry(keyAlias, null) as java.security.KeyStore.SecretKeyEntry).secretKey
-    }
-
-    private fun encrypt(value: String): String {
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
-        val encrypted = cipher.iv + cipher.doFinal(value.toByteArray(StandardCharsets.UTF_8))
-        return Base64.getEncoder().encodeToString(encrypted)
-    }
-
-    private fun decrypt(blob: String): String {
-        if (blob.isBlank()) return ""
-        return try {
-            val all = Base64.getDecoder().decode(blob)
-            val iv = all.copyOfRange(0, 12)
-            val data = all.copyOfRange(12, all.size)
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(), GCMParameterSpec(128, iv))
-            String(cipher.doFinal(data), StandardCharsets.UTF_8)
-        } catch (_: Exception) { "" }
-    }
+    private fun newChat(){ chat.removeAllViews(); prefs.edit().remove("history").remove("visual_chat").apply(); addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.",false) }
+    private fun loadSavedChat(){ val saved=prefs.getString("visual_chat","")?:""; if(saved.isBlank()) addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.",false) else saved.split("\n---\n").forEach{ if(it.startsWith("U:")) addBubble(it.removePrefix("U:"),true); if(it.startsWith("A:")) addBubble(it.removePrefix("A:"),false) } }
+    private fun saveChatVisual(){ val parts=mutableListOf<String>(); for(i in 0 until chat.childCount){ val row=chat.getChildAt(i) as? LinearLayout?:continue; val tv=row.getChildAt(0) as? TextView?:continue; val user=row.tag==true; parts.add((if(user)"U:" else "A:")+tv.text.toString()) }; prefs.edit().putString("visual_chat",parts.joinToString("\n---\n").takeLast(16000)).apply() }
+    private fun rounded(fill:Int,radius:Float,stroke:Int)=GradientDrawable().apply{setColor(fill);cornerRadius=dp(radius).toFloat();if(stroke!=Color.TRANSPARENT)setStroke(dp(1),stroke)}
+    private fun gradient(colors:IntArray,radius:Float)=GradientDrawable(GradientDrawable.Orientation.TL_BR,colors).apply{cornerRadius=dp(radius).toFloat()}
+    private fun dp(v:Int)= (v*resources.displayMetrics.density).roundToInt()
+    private fun dp(v:Float)= (v*resources.displayMetrics.density).roundToInt()
+    override fun onDestroy(){ super.onDestroy(); val loaded=model; if(loaded!=null) lifecycleScope.launch(Dispatchers.IO){try{Llama.releaseModel(loaded)}catch(_:Exception){}} }
 }
