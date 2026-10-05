@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.ScramiAI" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@color/scrami_bg</item>
+        <item name="android:navigationBarColor">@color/scrami_bg</item>
+        <item name="android:colorAccent">@color/scrami_accent</item>
+    </style>
+</resources>
