@@ -40,7 +40,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private val prefs by lazy { getSharedPreferences("scrami", MODE_PRIVATE) }
     private var model: LlamaModel? = null
     private val fileName = "qwen2.5-0.5b-instruct-q4_0.gguf"
-    private val url = "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf"
     private var currentMode = "SMART"
     private var tts: TextToSpeech? = null
     private var recognizer: SpeechRecognizer? = null
