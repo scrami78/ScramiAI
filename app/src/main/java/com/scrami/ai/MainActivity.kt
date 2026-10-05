@@ -85,7 +85,7 @@ class MainActivity : AppCompatActivity() {
 
         val composer=LinearLayout(this).apply{gravity=Gravity.BOTTOM}
         input=EditText(this).apply{
-            hint="Message Scrami…";hintTextColor=Color.rgb(115,111,129);setTextColor(Color.WHITE);textSize=16f
+            hint="Message Scrami…";setHintTextColor(Color.rgb(115,111,129));setTextColor(Color.WHITE);textSize=16f
             setPadding(dp(16),dp(12),dp(12),dp(12));background=rounded(Color.rgb(20,21,29),24f,Color.rgb(43,44,56));maxLines=5
         }
         composer.addView(input,LinearLayout.LayoutParams(0,dp(56),1f))
@@ -202,7 +202,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun newChat(){chat.removeAllViews();prefs.edit().clear().apply();addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.",false)}
-    private fun loadSaved(){val s=prefs.getString("visual","")?:"";if(s.isBlank())addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.",false)else s.split("\n---\n").forEach{if(it.startsWith("U:"))addBubble(it.substring(2),true);if(it.startsWith("A:"))addBubble(it.substring(2),false)}}
+    private fun saveVisual() {
+        val a = mutableListOf<String>()
+        for (i in 0 until chat.childCount) {
+            val row = chat.getChildAt(i) as? LinearLayout ?: continue
+            val tv = row.getChildAt(0) as? TextView ?: continue
+            val prefix = if (row.tag == true) "U:" else "A:"
+            a.add(prefix + tv.text.toString())
+        }
+        prefs.edit().putString("visual", a.joinToString("\n---\n").takeLast(16000)).apply()
+    }
     private fun saveVisual(){val a=mutableListOf<String>();for(i in 0 until chat.childCount){val r=chat.getChildAt(i)as?LinearLayout?:continue;val t=r.getChildAt(0)as?TextView?:continue;a.add((if(r.tag==true)"U:"else"A:")+t.text)}prefs.edit().putString("visual",a.joinToString("\n---\n").takeLast(16000)).apply()}
     private fun rounded(fill:Int,r:Float,stroke:Int)=GradientDrawable().apply{setColor(fill);cornerRadius=dp(r).toFloat();if(stroke!=Color.TRANSPARENT)setStroke(dp(1),stroke)}
     private fun grad(c:IntArray,r:Float)=GradientDrawable(GradientDrawable.Orientation.TL_BR,c).apply{cornerRadius=dp(r).toFloat()}
