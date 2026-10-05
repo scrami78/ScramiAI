@@ -201,7 +201,7 @@ class MainActivity : AppCompatActivity() {
         return tv
     }
 
-    private fun newChat(){chat.removeAllViews();prefs.edit().clear().apply();addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.",false)}
+    private fun loadSaved() {\n        val s = prefs.getString("visual", "") ?: ""\n        if (s.isBlank()) addBubble("Йоу. Я Scrami AI.\\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.", false)\n        else s.split("\\n---\\n").forEach { part ->\n            if (part.startsWith("U:")) addBubble(part.substring(2), true)\n            if (part.startsWith("A:")) addBubble(part.substring(2), false)\n        }\n    }\n\n    private fun newChat(){chat.removeAllViews();prefs.edit().clear().apply();addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.",false)}
     private fun saveVisual() {
         val a = mutableListOf<String>()
         for (i in 0 until chat.childCount) {
