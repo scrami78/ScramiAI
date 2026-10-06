@@ -72,7 +72,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         status=TextView(this).apply{text="PRIVATE • LOCAL • FREE";textSize=9f;setTextColor(Color.rgb(105,105,112));letterSpacing=.08f}
         titleBox.addView(status)
         header.addView(titleBox,LinearLayout.LayoutParams(0,-2,1f))
-        header.addView(TextView(this).apply{text="☰";textSize=22f;gravity=Gravity.CENTER;setTextColor(Color.BLACK);setOnClickListener{showTools()}},LinearLayout.LayoutParams(dp(44),dp(42)))
+        header.addView(TextView(this).apply{text="☰";textSize=22f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(25,26,30),20f,Color.rgb(55,56,62));setOnClickListener{showTools()}},LinearLayout.LayoutParams(dp(44),dp(42)))
         main.addView(header)
 
         val modeScroll=HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false}
@@ -87,7 +87,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val composer=LinearLayout(this).apply{gravity=Gravity.BOTTOM;setPadding(0,dp(4),0,dp(2))}
         val plus=TextView(this).apply{
             text="＋";textSize=27f;gravity=Gravity.CENTER;setTextColor(Color.BLACK)
-            background=rounded(Color.rgb(25,26,30),28f,Color.rgb(55,56,62));setOnClickListener{showAttachMenu()}
+            background=rounded(Color.rgb(25,26,30),28f,Color.rgb(55,56,62));setTextColor(Color.WHITE);setOnClickListener{showAttachMenu()}
         }
         composer.addView(plus,LinearLayout.LayoutParams(dp(54),dp(56)))
         input=EditText(this).apply{
