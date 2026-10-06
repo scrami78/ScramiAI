@@ -143,8 +143,25 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun installSwipe(root:FrameLayout,side:LinearLayout){
         var downX=0f
+        var tracking=false
         root.setOnTouchListener{_,e->
-            when(e.action){android.view.MotionEvent.ACTION_DOWN->{downX=e.x;true};android.view.MotionEvent.ACTION_UP->{val dx=e.x-downX;if(dx>80){side.animate().translationX(dp(310).toFloat()).setDuration(180).start()}else if(dx < -80){side.animate().translationX(0f).setDuration(180).start()};true};else->true}
+            when(e.action){
+                android.view.MotionEvent.ACTION_DOWN->{
+                    downX=e.x
+                    tracking=downX < dp(42) || side.translationX > 1f
+                    tracking
+                }
+                android.view.MotionEvent.ACTION_UP->{
+                    if(!tracking) return@setOnTouchListener false
+                    val dx=e.x-downX
+                    if(dx>80) side.animate().translationX(dp(310).toFloat()).setDuration(180).start()
+                    else if(dx < -80) side.animate().translationX(0f).setDuration(180).start()
+                    tracking=false
+                    true
+                }
+                android.view.MotionEvent.ACTION_CANCEL->{tracking=false;false}
+                else->tracking
+            }
         }
     }
 
