@@ -42,7 +42,7 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --min-sdk-version 26 "$APK"
           BADGING=$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK")
           echo "$BADGING"
-          echo "$BADGING" | grep -F "package: name='com.scrami.ai' versionName='5.1'"
+          echo "$BADGING" | grep -E "package: name='com\.scrami\.ai'.*versionName='5\.1'"
           unzip -l "$APK" | grep -q "assets/qwen2.5-0.5b-instruct-q4_k_m.gguf"
           sha256sum "$APK"
       - uses: actions/upload-artifact@v4
