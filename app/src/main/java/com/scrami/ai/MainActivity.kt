@@ -72,13 +72,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         status=TextView(this).apply{text="PRIVATE • LOCAL • FREE";textSize=9f;setTextColor(Color.rgb(105,105,112));letterSpacing=.08f}
         titleBox.addView(status)
         header.addView(titleBox,LinearLayout.LayoutParams(0,-2,1f))
-        header.addView(TextView(this).apply{text="☰";textSize=22f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(25,26,30),20f,Color.rgb(55,56,62));setOnClickListener{showTools()}},LinearLayout.LayoutParams(dp(44),dp(42)))
+        header.addView(TextView(this).apply{text="";textSize=1f;gravity=Gravity.CENTER;setTextColor(Color.TRANSPARENT);setOnClickListener{}},LinearLayout.LayoutParams(dp(44),dp(42)))
         main.addView(header)
-
-        val modeScroll=HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false}
-        val modeRow=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
-        buildModeRow(modeRow);modeScroll.addView(modeRow)
-        main.addView(modeScroll,LinearLayout.LayoutParams(-1,dp(42)))
 
         val scroll=ScrollView(this).apply{isFillViewport=true;setPadding(0,dp(4),0,dp(4))}
         chat=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(0,dp(8),0,dp(8))}
@@ -117,16 +112,32 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun buildSidebar():LinearLayout{
-        val side=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(18),dp(34),dp(12),dp(12));setBackgroundColor(Color.WHITE)}
-        side.addView(TextView(this).apply{text="S.AI";textSize=22f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK);setPadding(0,0,0,dp(18))})
-        side.addView(TextView(this).apply{text="＋  New chat";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{newChat()}})
-        side.addView(TextView(this).apply{text="⌕  Search";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{searchHistory()}})
-        side.addView(TextView(this).apply{text="▣  Chats";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{showHistory()}})
-        side.addView(TextView(this).apply{text="🧠  Memory";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{showMemory()}})
-        side.addView(TextView(this).apply{text="👤  Account";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{accountDialog()}})
-        side.addView(TextView(this).apply{text="🎨  Image Lab";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{imageLab()}})
-        side.addView(Space(this),LinearLayout.LayoutParams(1,0,1f))
-        side.addView(TextView(this).apply{text="S.AI";textSize=10f;setTextColor(Color.rgb(140,140,145))})
+        val side=LinearLayout(this).apply{
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(18),dp(34),dp(12),dp(12))
+            setBackgroundColor(Color.WHITE)
+            elevation=dp(8).toFloat()
+        }
+        side.addView(TextView(this).apply{
+            text="S.AI";textSize=24f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK)
+            setPadding(0,0,0,dp(20))
+        })
+        side.addView(TextView(this).apply{
+            text="＋  New chat";textSize=16f;setTextColor(Color.BLACK)
+            setPadding(0,dp(12),0,dp(12));setOnClickListener{newChat()}
+        })
+        side.addView(TextView(this).apply{
+            text="Chats";textSize=12f;setTextColor(Color.GRAY)
+            setPadding(0,dp(22),0,dp(8))
+        })
+        side.addView(TextView(this).apply{
+            text=(prefs.getString("history","")?:"").lines().filter{it.startsWith("USER:")}.takeLast(30).asReversed().joinToString("\n"){it.removePrefix("USER:").trim()}
+            textSize=14f;setTextColor(Color.DKGRAY);setPadding(0,dp(4),0,dp(8))
+        },LinearLayout.LayoutParams(-1,0,1f))
+        side.addView(TextView(this).apply{
+            text="⚙  Settings";textSize=15f;setTextColor(Color.BLACK)
+            setPadding(0,dp(16),0,dp(12));setOnClickListener{settingsDialog()}
+        })
         return side
     }
 
