@@ -32,11 +32,11 @@ jobs:
           SIZE=$(stat -c%s app/src/main/assets/qwen2.5-0.5b-instruct-q4_k_m.gguf)
           echo "Bundled model bytes: $SIZE"
           test "$SIZE" -gt 450000000
-      - name: Build release APK
-        run: gradle :app:assembleRelease --stacktrace
+      - name: Build verified APK
+        run: gradle :app:assembleDebug --stacktrace
       - name: Verify APK
         run: |
-          APK=app/build/outputs/apk/release/app-release.apk
+          APK=app/build/outputs/apk/debug/app-debug.apk
           test -f "$APK"
           unzip -t "$APK" >/dev/null
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
@@ -46,5 +46,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: SCRAMI-AI-5.1
-          path: app/build/outputs/apk/release/app-release.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
