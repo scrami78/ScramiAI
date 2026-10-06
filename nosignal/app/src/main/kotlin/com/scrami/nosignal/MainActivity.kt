@@ -10,7 +10,7 @@ class MainActivity: Activity(){
  override fun onCreate(b:Bundle?){super.onCreate(b);window.setFlags(1024,1024);setContentView(Game(this))}
 }
 class Game(ctx:Context):View(ctx){
- val p=Paint(3); var screen=0; var x=150f; var y=350f
+ val p=Paint(3); var screen=0; var px=150f; var py=350f
  var hp=100; var bat=100; var fear=0; var quest=1; var phone=false
  var enemy=false; var ex=850f; var ey=350f; var msg=0
  fun t(c:Canvas,s:String,a:Float,b:Float,z:Float,col:Int=Color.WHITE){p.color=col;p.textSize=z;p.style=Paint.Style.FILL;c.drawText(s,a,b,p)}
@@ -22,7 +22,7 @@ class Game(ctx:Context):View(ctx){
   for(i in 0..5){r(c,30+i*180f,80f,160+i*180f,215f,Color.rgb(20,20,23));t(c,"BLOCK "+(i+1),48+i*180f,105f,10f,Color.GRAY)}
   for(i in 0..8){p.color=Color.rgb(45,45,48);c.drawRect(i*135f,355f,i*135f+65f,360f,p)}
   if(quest==1){r(c,820f,120f,865f,175f,Color.WHITE);t(c,"+",834f,157f,27f,Color.BLACK)}
-  p.color=Color.WHITE;c.drawCircle(x,y,17f,p);p.color=Color.DKGRAY;c.drawCircle(x,y,6f,p)
+  p.color=Color.WHITE;c.drawCircle(px,py,17f,p);p.color=Color.DKGRAY;c.drawCircle(px,py,6f,p)
   if(enemy){p.color=Color.rgb(180,25,30);c.drawCircle(ex,ey,24f,p);t(c,"!",ex-5,ey+8,25f)}
   r(c,15f,12f,400f,58f,Color.rgb(8,8,10),true);t(c,"HP $hp",28f,42f,15f);t(c,"BAT $bat%",100f,42f,15f);t(c,"FEAR $fear",190f,42f,15f)
   r(c,910f,12f,1050f,58f,Color.rgb(20,20,22),true);t(c,"PHONE",930f,42f,13f)
@@ -34,19 +34,19 @@ class Game(ctx:Context):View(ctx){
  fun end(c:Canvas){t(c,if(hp<=0)"SIGNAL LOST" else "SIGNAL FOUND",90f,160f,50f);t(c,if(hp<=0)"Something reached you." else "The city finally answered.",95f,205f,18f,Color.LTGRAY);r(c,90f,270f,390f,335f,Color.WHITE);t(c,"PLAY AGAIN",160f,310f,20f,Color.BLACK)}
  override fun onTouchEvent(e:MotionEvent):Boolean{
   if(e.action!=MotionEvent.ACTION_DOWN)return true
-  val a=e.x;val b=e.y
+  val a=e.px;val b=e.py
   if(screen==0){if(b in 220f..330f){screen=1;reset()};invalidate();return true}
   if(screen==2){screen=0;invalidate();return true}
   if(phone){if(!(a in 350f..910f&&b in 50f..640f))phone=false;invalidate();return true}
   if(a>880&&b<90){phone=true;invalidate();return true}
   val s=32f
-  if(a<110&&b>510)x-=s else if(a<220&&b>510)x+=s else if(a in 60f..165f&&b in 440f..525f)y-=s else if(a in 60f..165f&&b>600)y+=s
-  x=x.coerceIn(20f,1070f);y=y.coerceIn(70f,680f)
-  if(quest==1&&x>760&&y in 80f..230f){quest=2;bat=100;msg=1;enemy=true;fear=20}
-  if(quest==2&&x>900&&y in 250f..500f){quest=3;msg=2;fear=55}
-  if(quest==3&&x<130&&y in 250f..500f){screen=2}
-  if(enemy){ex+=(x-ex)*.025f;ey+=(y-ey)*.025f;if(hypot(x-ex,y-ey)<48){hp-=12;fear=min(100,fear+12)};bat=max(0,bat-1);if(hp<=0)screen=2}
+  if(a<110&&b>510)px-=s else if(a<220&&b>510)px+=s else if(a in 60f..165f&&b in 440f..525f)py-=s else if(a in 60f..165f&&b>600)py+=s
+  px=px.coerceIn(20f,1070f);py=py.coerceIn(70f,680f)
+  if(quest==1&&px>760&&py in 80f..230f){quest=2;bat=100;msg=1;enemy=true;fear=20}
+  if(quest==2&&px>900&&py in 250f..500f){quest=3;msg=2;fear=55}
+  if(quest==3&&px<130&&py in 250f..500f){screen=2}
+  if(enemy){ex+=(px-ex)*.025f;ey+=(py-ey)*.025f;if(hypot(px-ex,py-ey)<48){hp-=12;fear=min(100,fear+12)};bat=max(0,bat-1);if(hp<=0)screen=2}
   invalidate();return true
  }
- fun reset(){x=150f;y=350f;hp=100;bat=100;fear=0;quest=1;phone=false;enemy=false;ex=850f;ey=350f;msg=0}
+ fun reset(){px=150f;py=350f;hp=100;bat=100;fear=0;quest=1;phone=false;enemy=false;ex=850f;ey=350f;msg=0}
 }
