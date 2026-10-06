@@ -160,7 +160,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             setTextColor(Color.BLACK); background = rounded(Color.WHITE, 23f, Color.TRANSPARENT)
             setOnClickListener { sendMessage() }
         }
-        composer.addView(send, LinearLayout.LayoutParams(dp(46),dp(46)).apply { leftMargin = dp(2) })        main.addView(composer)
+        composer.addView(send, LinearLayout.LayoutParams(dp(46),dp(46)).apply { leftMargin = dp(2) })
+        main.addView(composer)
 
         val footer = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(3),dp(4),dp(3),0) }
         val footerText = TextView(this).apply {
