@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         header.addView(mark,LinearLayout.LayoutParams(dp(40),dp(40)))
         val titleBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),0,0,0)}
-        titleBox.addView(TextView(this).apply{text="Scrami AI";textSize=18f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK)})
+        titleBox.addView(TextView(this).apply{text="S.AI";textSize=18f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK)})
         status=TextView(this).apply{text="PRIVATE • LOCAL • FREE";textSize=9f;setTextColor(Color.rgb(105,105,112));letterSpacing=.08f}
         titleBox.addView(status)
         header.addView(titleBox,LinearLayout.LayoutParams(0,-2,1f))
@@ -120,7 +120,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun buildSidebar():LinearLayout{
         val side=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(18),dp(34),dp(12),dp(12));setBackgroundColor(Color.WHITE)}
-        side.addView(TextView(this).apply{text="Scrami";textSize=22f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK);setPadding(0,0,0,dp(18))})
+        side.addView(TextView(this).apply{text="S.AI";textSize=22f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK);setPadding(0,0,0,dp(18))})
         side.addView(TextView(this).apply{text="＋  New chat";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{newChat()}})
         side.addView(TextView(this).apply{text="⌕  Search";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{searchHistory()}})
         side.addView(TextView(this).apply{text="▣  Chats";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{showHistory()}})
@@ -128,7 +128,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         side.addView(TextView(this).apply{text="👤  Account";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{accountDialog()}})
         side.addView(TextView(this).apply{text="🎨  Image Lab";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{imageLab()}})
         side.addView(Space(this),LinearLayout.LayoutParams(1,0,1f))
-        side.addView(TextView(this).apply{text="SCRAMI AI  •  v4";textSize=10f;setTextColor(Color.rgb(140,140,145))})
+        side.addView(TextView(this).apply{text="S.AI";textSize=10f;setTextColor(Color.rgb(140,140,145))})
         return side
     }
 
@@ -153,7 +153,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val overlay=FrameLayout(this).apply{setBackgroundColor(Color.rgb(8,9,13))}
         val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER}
         box.addView(TextView(this).apply{text="S";gravity=Gravity.CENTER;textSize=48f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);background=grad(intArrayOf(Color.rgb(172,91,255),Color.rgb(75,45,154)),32f)},LinearLayout.LayoutParams(dp(96),dp(96)))
-        box.addView(TextView(this).apply{text="SCRAMI AI";textSize=28f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);gravity=Gravity.CENTER;setPadding(0,dp(18),0,dp(4));letterSpacing=.12f})
+        box.addView(TextView(this).apply{text="S.AI";textSize=28f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);gravity=Gravity.CENTER;setPadding(0,dp(18),0,dp(4));letterSpacing=.12f})
         box.addView(TextView(this).apply{text="YOUR AI. YOUR DEVICE.";textSize=11f;setTextColor(Color.rgb(145,139,160));gravity=Gravity.CENTER;letterSpacing=.14f})
         overlay.addView(box,FrameLayout.LayoutParams(-1,-1))
         addContentView(overlay,FrameLayout.LayoutParams(-1,-1))
@@ -271,7 +271,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun loadSaved() {
         val s = prefs.getString("visual", "") ?: ""
         if (s.isBlank()) {
-            addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.", false)
+            addBubble("S.AI готов. Локальная модель работает на устройстве — без API и подписки.", false)
         } else {
             s.split("\n---\n").forEach { part ->
                 if (part.startsWith("U:")) addBubble(part.substring(2), true)
@@ -281,8 +281,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
     private fun newChat() {
         chat.removeAllViews()
-        prefs.edit().clear().apply()
-        addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.", false)
+        prefs.edit().remove("visual").remove("history").apply()
+        addBubble("S.AI готов. Локальная модель работает на устройстве — без API и подписки.", false)
     }
     private fun saveVisual() {
         val a = mutableListOf<String>()
