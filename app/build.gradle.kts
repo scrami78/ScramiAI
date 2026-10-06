@@ -18,6 +18,7 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+    externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt") } }
 }
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
