@@ -11,7 +11,7 @@ import torch
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-app = FastAPI(title="S.AI Core", version="7.0")
+app = FastAPI(title="S.AI Core", version="7.2")
 
 CHAT_MODEL = os.getenv("SAI_CHAT_MODEL", "Qwen/Qwen2.5-3B-Instruct")
 IMAGE_MODEL = os.getenv("SAI_IMAGE_MODEL", "stabilityai/stable-diffusion-2-1-base")
@@ -39,7 +39,7 @@ class ChatResponse(BaseModel):
     model: str
     device: str
     language: str = "unknown"
-    sources: list[SearchItem] = []
+    sources: list[SearchItem] = Field(default_factory=list)
 
 
 class SearchResponse(BaseModel):
@@ -90,8 +90,8 @@ class DDGParser(HTMLParser):
 
 
 def detect_language(text: str) -> str:
-    if re.search(r"[А-Яа-яЁё]", text): return "Russian"
     if re.search(r"[ЇїІіЄєҐґ]", text): return "Ukrainian"
+    if re.search(r"[А-Яа-яЁё]", text): return "Russian"
     if re.search(r"[一-鿿]", text): return "Chinese"
     if re.search(r"[ぁ-ゟァ-ヿ]", text): return "Japanese"
     if re.search(r"[가-힣]", text): return "Korean"
@@ -122,11 +122,11 @@ def needs_web(text: str) -> bool:
 
 
 @lru_cache(maxsize=1)
-def chat_pipeline():
+def chat_pipeline(model_name: str = CHAT_MODEL):
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained(CHAT_MODEL)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(
-        CHAT_MODEL,
+        model_name,
         torch_dtype=DTYPE,
         device_map="auto" if DEVICE == "cuda" else None,
     )
@@ -163,7 +163,8 @@ def health():
 
 @app.post("/v1/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
-    tokenizer, model = chat_pipeline()
+    selected_model = os.getenv("SAI_CODE_MODEL" if req.mode.upper() == "CODE" else "SAI_FAST_MODEL" if req.mode.upper() == "FAST" else "SAI_SMART_MODEL", CHAT_MODEL)
+    tokenizer, model = chat_pipeline(selected_model)
     language = detect_language(req.message)
     sources = web_search(req.message) if req.use_web and needs_web(req.message) else []
     source_text = "\n".join(f"[{i+1}] {s.title} — {s.url}\n{s.snippet}" for i, s in enumerate(sources))
@@ -199,7 +200,7 @@ def chat(req: ChatRequest):
         )
     generated = output[0][inputs["input_ids"].shape[1]:]
     text = tokenizer.decode(generated, skip_special_tokens=True).strip()
-    return ChatResponse(text=text, model=CHAT_MODEL, device=DEVICE, language=language, sources=sources)
+    return ChatResponse(text=text, model=selected_model, device=DEVICE, language=language, sources=sources)
 
 
 @app.post("/v1/image", response_model=ImageResponse)
