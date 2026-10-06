@@ -253,7 +253,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun ready(file:File){
         modelLabel.text="LOCAL MODEL • QWEN 0.5B • OFFLINE"
-        status.text="● READY • PRIVATE • FREE"
+        status.text="● READY • C++ NATIVE • PRIVATE • FREE"
         status.setTextColor(Color.rgb(107,220,150))
         lifecycleScope.launch(Dispatchers.IO){
             try{
@@ -275,7 +275,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 if(text.lowercase().startsWith("remember ")){val m=prefs.getString("memory","")?:"";prefs.edit().putString("memory",(m+"\n"+text.substring(9).trim()).trim()).apply()}
                 val memory=prefs.getString("memory","")?:""
                 val style=prefs.getString("style","friendly, confident, natural")?: "friendly, confident, natural"
-                val prompt="MEMORY:\n"+memory.takeLast(1600)+"\nSTYLE:\n"+style+"\nCONVERSATION:\n"+history.takeLast(4200)+"\nUSER: "+text+"\nASSISTANT:"
+                val prompt=NativeCore.preparePrompt("MEMORY:\n"+memory.takeLast(1600)+"\nSTYLE:\n"+style+"\nCONVERSATION:\n"+history.takeLast(4200)+"\nUSER: "+text+"\nASSISTANT:")
                 val result=Llama.complete(loaded,prompt=prompt,systemPrompt=systemPromptForMode(),maxTokens=if(currentMode=="FAST")260 else 700)
                 val answer=result.text.trim().ifBlank{"Не смог сформировать ответ."}
                 prefs.edit().putString("history",(history+"\nUSER: "+text+"\nASSISTANT: "+answer).takeLast(12000)).apply()
