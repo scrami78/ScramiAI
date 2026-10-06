@@ -13,6 +13,7 @@ import java.util.Base64
 
 data class SaiChatResult(val text: String, val model: String, val device: String)
 data class SaiImageResult(val base64: String, val model: String, val device: String)
+data class SaiSearchItem(val title: String, val url: String, val snippet: String)
 
 object SaiServerClient {
     private val client = OkHttpClient.Builder().build()
@@ -24,6 +25,7 @@ object SaiServerClient {
             .put("history", history)
             .put("memory", memory)
             .put("mode", mode)
+            .put("use_web", true)
             .put("max_tokens", if (mode == "FAST") 450 else 1200)
         val request = Request.Builder()
             .url(baseUrl.trimEnd('/') + "/v1/chat")
@@ -38,6 +40,24 @@ object SaiServerClient {
                 json.optString("model", "S.AI Core"),
                 json.optString("device", "local")
             )
+        }
+    }
+
+
+    fun search(baseUrl: String, query: String): List<SaiSearchItem> {
+        val payload = JSONObject().put("query", query)
+        val request = Request.Builder()
+            .url(baseUrl.trimEnd('/') + "/v1/search")
+            .post(payload.toString().toRequestBody(jsonType))
+            .build()
+        client.newCall(request).execute().use { response ->
+            val body = response.body?.string().orEmpty()
+            if (!response.isSuccessful) error("Search HTTP " + response.code)
+            val arr = JSONObject(body).optJSONArray("results") ?: return emptyList()
+            return (0 until arr.length()).map { i ->
+                val o = arr.getJSONObject(i)
+                SaiSearchItem(o.optString("title"), o.optString("url"), o.optString("snippet"))
+            }
         }
     }
 
