@@ -69,6 +69,9 @@ func main() {
 	http.HandleFunc("/v1/image", func(w http.ResponseWriter, r *http.Request) {
 		g.proxy("/v1/image", w, r)
 	})
+	http.HandleFunc("/v1/search", func(w http.ResponseWriter, r *http.Request) {
+		g.proxy("/v1/search", w, r)
+	})
 	http.HandleFunc("/v1/info", func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"name": "S.AI Core Gateway",
