@@ -1,10 +1,13 @@
 name: Build SCRAMI AI APK
+
 on:
   workflow_dispatch:
   push:
     branches: [ main ]
+
 permissions:
   contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,10 +24,27 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10'
-      - name: Build debug APK
-        run: gradle :app:assembleDebug --stacktrace
+      - name: Download bundled Qwen model
+        run: |
+          mkdir -p app/src/main/assets
+          curl -L --fail --retry 5 --retry-delay 3 -o app/src/main/assets/qwen2.5-0.5b-instruct-q4_k_m.gguf https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
+          test -s app/src/main/assets/qwen2.5-0.5b-instruct-q4_k_m.gguf
+          SIZE=$(stat -c%s app/src/main/assets/qwen2.5-0.5b-instruct-q4_k_m.gguf)
+          echo "Bundled model bytes: $SIZE"
+          test "$SIZE" -gt 450000000
+      - name: Build release APK
+        run: gradle :app:assembleRelease --stacktrace
+      - name: Verify APK
+        run: |
+          APK=app/build/outputs/apk/release/app-release.apk
+          test -f "$APK"
+          unzip -t "$APK" >/dev/null
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E "package: name='com.scrami.ai' versionName='5.1'"
+          unzip -l "$APK" | grep -q "assets/qwen2.5-0.5b-instruct-q4_k_m.gguf"
+          sha256sum "$APK"
       - uses: actions/upload-artifact@v4
         with:
-          name: SCRAMI-AI-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: SCRAMI-AI-5.1
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
