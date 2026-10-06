@@ -75,7 +75,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         header.addView(menu, LinearLayout.LayoutParams(dp(44), dp(44)))
 
         val mark = TextView(this).apply {
-            text = "S"; textSize = 19f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
+            text = "S.AI"; textSize = 13f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.BLACK); background = rounded(Color.WHITE, 15f, Color.TRANSPARENT)
         }
         header.addView(mark, LinearLayout.LayoutParams(dp(42), dp(42)).apply { leftMargin = dp(5) })
@@ -90,7 +90,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         names.addView(status)
         header.addView(names, LinearLayout.LayoutParams(0,-2,1f))
         val avatar = TextView(this).apply {
-            text = "S"; textSize = 15f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
+            text = "SA"; textSize = 12f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE); background = rounded(Color.rgb(39,42,51), 22f, Color.rgb(69,72,84))
             setOnClickListener { accountDialog() }
         }
@@ -129,31 +129,38 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         main.addView(quick)
 
-        val composer = LinearLayout(this).apply { gravity = Gravity.BOTTOM }
+        val composer = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(6), dp(6), dp(6), dp(6))
+            background = rounded(Color.rgb(22,24,30), 30f, Color.rgb(52,55,65))
+        }
         val plus = TextView(this).apply {
-            text = "+"; textSize = 25f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
-            background = rounded(Color.rgb(20,22,28), 27f, Color.rgb(48,51,60))
-            setOnClickListener { showAttachMenu() }
+            text = "+"; textSize = 24f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE); setOnClickListener { showAttachMenu() }
         }
-        composer.addView(plus, LinearLayout.LayoutParams(dp(50),dp(58)))
+        composer.addView(plus, LinearLayout.LayoutParams(dp(42),dp(48)))
         input = EditText(this).apply {
-            hint = "Message S.AI…"; setHintTextColor(Color.rgb(122,126,138)); setTextColor(Color.WHITE)
-            textSize = 16f; maxLines = 6; setPadding(dp(15),dp(10),dp(12),dp(10))
-            background = rounded(Color.rgb(23,25,31), 25f, Color.rgb(49,52,62))
+            hint = "MESSAGE S.AI"; setHintTextColor(Color.rgb(120,124,136)); setTextColor(Color.WHITE)
+            textSize = 16f; maxLines = 5; minLines = 1; gravity = Gravity.CENTER_VERTICAL
+            setSingleLine(false); includeFontPadding = false; setPadding(dp(8),0,dp(8),0); background = null
         }
-        composer.addView(input, LinearLayout.LayoutParams(0,dp(58),1f).apply { leftMargin = dp(6) })
+        composer.addView(input, LinearLayout.LayoutParams(0,dp(48),1f))
+        val camera = TextView(this).apply {
+            text = "⌾"; textSize = 22f; gravity = Gravity.CENTER; setTextColor(Color.rgb(224,226,233))
+            setOnClickListener { capturePhoto() }
+        }
+        composer.addView(camera, LinearLayout.LayoutParams(dp(42),dp(48)))
         val mic = TextView(this).apply {
-            text = "🎙"; textSize = 18f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
-            background = rounded(Color.rgb(23,25,31), 27f, Color.rgb(49,52,62))
+            text = "●"; textSize = 13f; gravity = Gravity.CENTER; setTextColor(Color.rgb(224,226,233))
             setOnClickListener { startVoice() }
         }
-        composer.addView(mic, LinearLayout.LayoutParams(dp(50),dp(58)).apply { leftMargin = dp(6) })
+        composer.addView(mic, LinearLayout.LayoutParams(dp(38),dp(48)))
         send = TextView(this).apply {
-            text = "↑"; textSize = 23f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; setTextColor(Color.BLACK)
-            background = rounded(Color.WHITE, 28f, Color.TRANSPARENT); setOnClickListener { sendMessage() }
+            text = "↑"; textSize = 22f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+            setTextColor(Color.BLACK); background = rounded(Color.WHITE, 23f, Color.TRANSPARENT)
+            setOnClickListener { sendMessage() }
         }
-        composer.addView(send, LinearLayout.LayoutParams(dp(56),dp(58)).apply { leftMargin = dp(6) })
-        main.addView(composer)
+        composer.addView(send, LinearLayout.LayoutParams(dp(46),dp(46)).apply { leftMargin = dp(2) })        main.addView(composer)
 
         val footer = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(3),dp(4),dp(3),0) }
         val footerText = TextView(this).apply {
@@ -445,7 +452,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 input.setSelection(input.text.length)
             }else{
                 lifecycleScope.launch(Dispatchers.IO){
-                    val t=try{contentResolver.openInputStream(data.data!!)?.bufferedReader()?.use{it.readText().take(10000)}?:""}catch(_:Exception){"")
+                    val t=try{contentResolver.openInputStream(data.data!!)?.bufferedReader()?.use{it.readText().take(10000)}?:""}catch(_:Exception){""}
                     withContext(Dispatchers.Main){
                         input.setText(if(t.isBlank())"Attachment selected. Ask Scrami what to do with it." else "Analyze this document:\n"+t)
                         input.setSelection(input.text.length)
