@@ -25,10 +25,11 @@ import dev.ffmpegkit.llama.LlamaModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -39,39 +40,39 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var status: TextView
     private lateinit var progress: ProgressBar
     private lateinit var modelLabel: TextView
-    private val http = OkHttpClient()
     private val prefs by lazy { getSharedPreferences("scrami", MODE_PRIVATE) }
     private var model: LlamaModel? = null
     private val fileName = "qwen2.5-0.5b-instruct-q4_0.gguf"
-    private val url = "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf"
     private var currentMode = "SMART"
     private var tts: TextToSpeech? = null
     private var recognizer: SpeechRecognizer? = null
+    private var thinkingTimer: Runnable? = null
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
         tts = TextToSpeech(this, this)
+        applyThemePreference()
         buildUi()
         loadSaved()
         splash()
     }
 
     private fun buildUi() {
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.WHITE) }
+        val root = FrameLayout(this).apply { setBackgroundColor(bgColor()) }
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(10), dp(14), dp(8))
-            setBackgroundColor(Color.WHITE)
+            setBackgroundColor(bgColor())
         }
         val header = LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL; setPadding(0,dp(4),0,dp(8)) }
         val mark = TextView(this).apply {
-            text="S";gravity=Gravity.CENTER;textSize=18f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK)
-            background=rounded(Color.WHITE,16f,Color.rgb(220,220,224))
+            text="S";gravity=Gravity.CENTER;textSize=18f;typeface=Typeface.DEFAULT_BOLD;setTextColor(textColor())
+            background=rounded(cardColor(),16f,borderColor())
         }
         header.addView(mark,LinearLayout.LayoutParams(dp(40),dp(40)))
         val titleBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),0,0,0)}
         titleBox.addView(TextView(this).apply{text="Scrami AI";textSize=18f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK)})
-        status=TextView(this).apply{text="PRIVATE • LOCAL • FREE";textSize=9f;setTextColor(Color.rgb(105,105,112));letterSpacing=.08f}
+        status=TextView(this).apply{text="PRIVATE • LOCAL • FREE";textSize=9f;setTextColor(mutedColor());letterSpacing=.08f}
         titleBox.addView(status)
         header.addView(titleBox,LinearLayout.LayoutParams(0,-2,1f))
         header.addView(TextView(this).apply{text="☰";textSize=22f;gravity=Gravity.CENTER;setTextColor(Color.BLACK);setOnClickListener{showTools()}},LinearLayout.LayoutParams(dp(44),dp(42)))
@@ -89,20 +90,20 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val composer=LinearLayout(this).apply{gravity=Gravity.BOTTOM;setPadding(0,dp(4),0,dp(2))}
         val plus=TextView(this).apply{
             text="＋";textSize=27f;gravity=Gravity.CENTER;setTextColor(Color.BLACK)
-            background=rounded(Color.rgb(247,247,249),28f,Color.rgb(225,225,229));setOnClickListener{showAttachMenu()}
+            background=rounded(cardColor(),28f,borderColor());setOnClickListener{showAttachMenu()}
         }
         composer.addView(plus,LinearLayout.LayoutParams(dp(54),dp(56)))
         input=EditText(this).apply{
             hint="Message Scrami…";setHintTextColor(Color.rgb(145,145,150));setTextColor(Color.BLACK);textSize=16f
-            setPadding(dp(15),dp(10),dp(12),dp(10));background=rounded(Color.rgb(247,247,249),25f,Color.rgb(225,225,229));maxLines=5
+            setPadding(dp(15),dp(10),dp(12),dp(10));background=rounded(cardColor(),25f,borderColor());maxLines=5
         }
         composer.addView(input,LinearLayout.LayoutParams(0,dp(56),1f).apply{leftMargin=dp(7)})
         val mic=TextView(this).apply{
-            text="🎙";textSize=18f;gravity=Gravity.CENTER;setTextColor(Color.BLACK);background=rounded(Color.rgb(247,247,249),28f,Color.rgb(225,225,229));setOnClickListener{startVoice()}
+            text="🎙";textSize=18f;gravity=Gravity.CENTER;setTextColor(textColor());background=rounded(cardColor(),28f,Color.rgb(225,225,229));setOnClickListener{startVoice()}
             setOnLongClickListener{startVoice();true}
         }
         composer.addView(mic,LinearLayout.LayoutParams(dp(52),dp(56)).apply{leftMargin=dp(6)})
-        send=TextView(this).apply{text="↑";gravity=Gravity.CENTER;textSize=23f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);background=rounded(Color.BLACK,28f,Color.TRANSPARENT);setOnClickListener{sendMessage()}}
+        send=TextView(this).apply{text="↑";gravity=Gravity.CENTER;textSize=23f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);background=rounded(accentColor(),28f,Color.TRANSPARENT);setOnClickListener{sendMessage()}}
         composer.addView(send,LinearLayout.LayoutParams(dp(56),dp(56)).apply{leftMargin=dp(6)})
         main.addView(composer)
 
@@ -119,16 +120,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun buildSidebar():LinearLayout{
-        val side=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(18),dp(34),dp(12),dp(12));setBackgroundColor(Color.WHITE)}
-        side.addView(TextView(this).apply{text="Scrami";textSize=22f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK);setPadding(0,0,0,dp(18))})
-        side.addView(TextView(this).apply{text="＋  New chat";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{newChat()}})
+        val side=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(18),dp(34),dp(12),dp(12));setBackgroundColor(bgColor())}
+        side.addView(TextView(this).apply{text="S.AI";textSize=22f;typeface=Typeface.DEFAULT_BOLD;setTextColor(textColor());setPadding(0,0,0,dp(18))})
+        side.addView(TextView(this).apply{text="＋  New chat";textSize=16f;setTextColor(textColor());setPadding(0,dp(12),0,dp(12));setOnClickListener{newChat()}})
         side.addView(TextView(this).apply{text="⌕  Search";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{searchHistory()}})
         side.addView(TextView(this).apply{text="▣  Chats";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{showHistory()}})
         side.addView(TextView(this).apply{text="🧠  Memory";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{showMemory()}})
         side.addView(TextView(this).apply{text="👤  Account";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{accountDialog()}})
         side.addView(TextView(this).apply{text="🎨  Image Lab";textSize=16f;setTextColor(Color.BLACK);setPadding(0,dp(12),0,dp(12));setOnClickListener{imageLab()}})
         side.addView(Space(this),LinearLayout.LayoutParams(1,0,1f))
-        side.addView(TextView(this).apply{text="SCRAMI AI  •  v4";textSize=10f;setTextColor(Color.rgb(140,140,145))})
+        side.addView(TextView(this).apply{text="S.AI  •  v5";textSize=10f;setTextColor(Color.rgb(140,140,145))})
         return side
     }
 
@@ -159,48 +160,51 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         addContentView(overlay,FrameLayout.LayoutParams(-1,-1))
         overlay.alpha=0f
         overlay.animate().alpha(1f).setDuration(250).withEndAction{
-            overlay.animate().alpha(0f).setDuration(450).setStartDelay(450).withEndAction{
+            overlay.animate().alpha(0f).setDuration(220).setStartDelay(120).withEndAction{
                 (overlay.parent as? android.view.ViewGroup)?.removeView(overlay);ensureModel()
             }.start()
         }.start()
     }
 
     private fun ensureModel() {
-        val file=File(getExternalFilesDir("models"),fileName)
-        if(file.exists() && file.length()>100_000_000){ready(file);return}
-        modelLabel.text="Downloading local model • ~429 MB"
-        status.text="FIRST RUN • DOWNLOAD REQUIRED"
+        val file=File(filesDir,"models/$fileName")
+        if(file.exists() && file.length()>400_000_000L){ ready(file); return }
+        modelLabel.text="Preparing bundled local model…"
+        status.text="● LOCAL MODEL • PREPARING"
         lifecycleScope.launch(Dispatchers.IO){
             try{
                 file.parentFile?.mkdirs()
                 val part=File(file.absolutePath+".part")
-                http.newCall(Request.Builder().url(url).build()).execute().use{r->
-                    if(!r.isSuccessful) error("HTTP "+r.code)
-                    val body=r.body?:error("Empty download")
-                    val total=body.contentLength();var done=0L
-                    body.byteStream().use{ins->FileOutputStream(part).use{out->
-                        val buf=ByteArray(64*1024)
+                assets.open(fileName).use{ins->
+                    FileOutputStream(part).use{out->
+                        val buf=ByteArray(1024*1024)
+                        var done=0L
+                        val total=429_000_000L
                         while(true){
-                            val n=ins.read(buf);if(n<0)break
-                            out.write(buf,0,n);done+=n
-                            if(total>0)withContext(Dispatchers.Main){
-                                val pct=(done*100/total).toInt();progress.progress=pct
-                                modelLabel.text="Downloading local model • "+pct+"%"
+                            val n=ins.read(buf)
+                            if(n<0) break
+                            out.write(buf,0,n)
+                            done+=n
+                            if(done % (8L*1024*1024) < 1024*1024){
+                                withContext(Dispatchers.Main){
+                                    progress.progress=((done*100/total).coerceAtMost(99)).toInt()
+                                    modelLabel.text="Preparing bundled model • "+progress.progress+"%"
+                                }
                             }
                         }
-                    }}
+                    }
                 }
-                if(part.length()<100_000_000)error("Incomplete model")
+                if(part.length()<400_000_000L) error("Bundled model is incomplete")
                 if(file.exists())file.delete()
-                part.renameTo(file)
+                if(!part.renameTo(file)) error("Could not finalize bundled model")
                 withContext(Dispatchers.Main){progress.progress=100}
                 ready(file)
             }catch(e:Exception){
                 withContext(Dispatchers.Main){
-                    modelLabel.text="Download failed • tap here to retry"
-                    status.text="MODEL NOT READY"
+                    modelLabel.text="Local model error • tap to retry"
+                    status.text="● MODEL ERROR"
                     modelLabel.setOnClickListener{ensureModel()}
-                    Toast.makeText(this@MainActivity,e.message?:"Download error",Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity,e.message?:"Model preparation error",Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -223,29 +227,47 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun sendMessage(){
         val text=input.text.toString().trim();if(text.isEmpty())return
         val loaded=model?:run{Toast.makeText(this,"Модель ещё загружается.",Toast.LENGTH_SHORT).show();return}
-        input.setText("");addBubble(text,true);val answerView=addBubble("Думаю…",false);send.isEnabled=false;status.text="● THINKING LOCALLY"
+        input.setText("");addBubble(text,true);val answerView=addThinkingBubble();send.isEnabled=false;status.text="● THINKING";startThinkingAnimation(answerView)
         lifecycleScope.launch(Dispatchers.IO){
             try{
                 val history=prefs.getString("history","")?:""
                 if(text.lowercase().startsWith("remember ")){val m=prefs.getString("memory","")?:"";prefs.edit().putString("memory",(m+"\n"+text.substring(9).trim()).trim()).apply()}
                 val memory=prefs.getString("memory","")?:""
-                val prompt=if(history.isBlank())text else "MEMORY:\n"+memory.takeLast(3000)+"\n"+history.takeLast(7000)+"\nUSER: "+text+"\nASSISTANT:"
+                val webContext = if (text.startsWith("/web ", true) || text.startsWith("web: ", true)) fetchWebContext(text.substringAfter(" ").trim()) else ""
+                val promptBase=if(history.isBlank())text else "MEMORY:\n"+memory.takeLast(3000)+"\n"+history.takeLast(7000)+"\nUSER: "+text+"\nASSISTANT:"
+                val prompt=if(webContext.isBlank()) promptBase else "INTERNET SEARCH RESULTS:\n"+webContext.takeLast(12000)+"\n\n"+promptBase
                 val result=Llama.complete(loaded,prompt=prompt,systemPrompt=systemPromptForMode(),maxTokens=if(currentMode=="FAST")220 else 480)
                 val answer=result.text.trim().ifBlank{"Не смог сформировать ответ."}
                 prefs.edit().putString("history",(history+"\nUSER: "+text+"\nASSISTANT: "+answer).takeLast(12000)).apply()
                 withContext(Dispatchers.Main){
-                    answerView.text=answer;status.text="● READY • PRIVATE";send.isEnabled=true;saveVisual()
+                    stopThinkingAnimation();answerView.text=answer;status.text="● READY • PRIVATE";send.isEnabled=true;saveVisual()
                 }
             }catch(e:Exception){
-                withContext(Dispatchers.Main){answerView.text="Ошибка локальной модели: "+(e.message?:"unknown");status.text="● READY";send.isEnabled=true}
+                withContext(Dispatchers.Main){stopThinkingAnimation();answerView.text="Ошибка локальной модели: "+(e.message?:"unknown");status.text="● READY";send.isEnabled=true}
             }
         }
     }
 
     private fun modeName(m:String)=when(m){"FAST"->"⚡ FAST";"SMART"->"🧠 SMART";"CREATIVE"->"🎨 CREATIVE";"CODE"->"💻 CODE";else->"📚 STUDY"}
-    private fun buildModeRow(row:LinearLayout){row.removeAllViews();listOf("FAST","SMART","CREATIVE","CODE","STUDY").forEach{m->row.addView(TextView(this).apply{text=modeName(m);textSize=10f;gravity=Gravity.CENTER;setPadding(dp(12),0,dp(12),0);setTextColor(if(m==currentMode)Color.BLACK else Color.WHITE);background=rounded(if(m==currentMode)Color.WHITE else Color.rgb(20,21,26),18f,Color.TRANSPARENT);setOnClickListener{currentMode=m;buildModeRow(row)}},LinearLayout.LayoutParams(dp(105),dp(34)).apply{rightMargin=dp(6)})}}
-    private fun systemPromptForMode()=when(currentMode){"FAST"->"Ты Scrami AI FAST. Отвечай максимально быстро и кратко."; "CREATIVE"->"Ты Scrami AI CREATIVE. Ты креативный автор: музыка, тексты, идеи."; "CODE"->"Ты Scrami AI CODE. Ты senior программист. Давай рабочий код."; "STUDY"->"Ты Scrami AI STUDY. Объясняй школьные темы просто и с примерами."; else->"Ты Scrami AI SMART — личный помощник. Отвечай естественно и полезно. Если не знаешь — честно скажи."}
-    private fun showTools(){PopupMenu(this,send).apply{menu.add("＋ New chat");menu.add("💬 History");menu.add("🔎 Search");menu.add("🌐 Web");menu.add("📁 File");menu.add("🧮 Calculator");menu.add("🎨 Profile");menu.add("🔊 Read last answer");setOnMenuItemClickListener{when(it.title.toString()){"＋ New chat"->newChat();"💬 History"->showHistory();"🔎 Search"->searchHistory();"🌐 Web"->openWeb();"📁 File"->pickFile();"🧮 Calculator"->calculator();"🎨 Profile"->profile();"🔊 Read last answer"->speakLast()};true};show()}}
+    private fun buildModeRow(row:LinearLayout){row.removeAllViews();listOf("FAST","SMART","CREATIVE","CODE","STUDY").forEach{m->row.addView(TextView(this).apply{text=modeName(m);textSize=10f;gravity=Gravity.CENTER;setPadding(dp(12),0,dp(12),0);setTextColor(if(m==currentMode)Color.BLACK else Color.rgb(90,90,96));background=rounded(if(m==currentMode)Color.rgb(242,242,245) else Color.rgb(250,250,252),18f,Color.rgb(230,230,234));setOnClickListener{currentMode=m;buildModeRow(row)}},LinearLayout.LayoutParams(dp(105),dp(34)).apply{rightMargin=dp(6)})}}
+    private fun systemPromptForMode()=when(currentMode){"FAST"->"Ты Scrami AI FAST. Отвечай максимально быстро и кратко."; "CREATIVE"->"Ты Scrami AI CREATIVE. Ты креативный автор: музыка, тексты, идеи."; "CODE"->"Ты Scrami AI CODE. Ты senior программист. Давай рабочий код."; "STUDY"->"Ты Scrami AI STUDY. Объясняй школьные темы просто и с примерами."; else->"Ты S.AI — качественный персональный ИИ-помощник, созданный Scrami. Если тебя спрашивают, кто тебя создал или кто твой создатель, отвечай прямо: «Меня создал Scrami». Не выдумывай другого создателя. Отвечай естественно, уверенно и по существу. Не повторяй вопрос пользователя, не начинай каждый ответ с приветствия и не говори о себе без причины. Не выдумывай факты; если информации недостаточно, прямо скажи об этом. Соблюдай контекст диалога. Отвечай на языке пользователя. Форматируй длинные ответы понятно: короткие абзацы, списки и код там, где это уместно."}
+    private fun applyThemePreference(){ if(!prefs.contains("theme")) prefs.edit().putString("theme","auto").apply() }
+    private fun isDarkTheme(): Boolean {
+        return when (prefs.getString("theme","auto")) {
+            "dark" -> true
+            "light" -> false
+            else -> (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+    }
+    private fun bgColor()=if(isDarkTheme())Color.rgb(8,9,13) else Color.WHITE
+    private fun cardColor()=if(isDarkTheme())Color.rgb(25,26,34) else Color.rgb(247,247,249)
+    private fun textColor()=if(isDarkTheme())Color.WHITE else Color.rgb(20,20,24)
+    private fun mutedColor()=if(isDarkTheme())Color.rgb(155,155,165) else Color.rgb(105,105,112)
+    private fun borderColor()=if(isDarkTheme())Color.rgb(50,51,61) else Color.rgb(225,225,229)
+    private fun accentColor()=if(isDarkTheme())Color.rgb(220,220,225) else Color.rgb(20,20,24)
+    private fun bubbleTextColor()=if(isDarkTheme())Color.WHITE else Color.rgb(30,30,34)
+    private fun themeDialog(){ val labels=arrayOf("Авто","Светлая","Тёмная"); val vals=arrayOf("auto","light","dark"); val cur=prefs.getString("theme","auto")?:"auto"; val checked=vals.indexOf(cur); AlertDialog.Builder(this).setTitle("Тема").setSingleChoiceItems(labels,checked){d,w->prefs.edit().putString("theme",vals[w]).apply();d.dismiss();recreate()}.setNegativeButton("Отмена",null).show() }
+    private fun showTools(){PopupMenu(this,send).apply{menu.add("＋ New chat");menu.add("💬 History");menu.add("🔎 Search");menu.add("🌐 Web");menu.add("📁 File");menu.add("🧮 Calculator");menu.add("🎨 Profile");menu.add("🎨 Theme");menu.add("🔊 Read last answer");setOnMenuItemClickListener{when(it.title.toString()){"＋ New chat"->newChat();"💬 History"->showHistory();"🔎 Search"->searchHistory();"🌐 Web"->openWeb();"📁 File"->pickFile();"🧮 Calculator"->calculator();"🎨 Profile"->profile();"🎨 Theme"->themeDialog();"🔊 Read last answer"->speakLast()};true};show()}}
     private fun showHistory(){AlertDialog.Builder(this).setTitle("Chat history").setMessage((prefs.getString("history","")?:"").takeLast(5000).ifBlank{"No saved messages yet."}).setPositiveButton("OK",null).show()}
     private fun searchHistory(){val e=EditText(this);e.hint="Search history";AlertDialog.Builder(this).setTitle("Search").setView(e).setPositiveButton("Find"){_,_->val h=prefs.getString("history","")?:"";val q=e.text.toString();AlertDialog.Builder(this).setTitle("Results").setMessage(h.lines().filter{it.contains(q,true)}.joinToString("\n").take(5000).ifBlank{"Nothing found."}).setPositiveButton("OK",null).show()}.setNegativeButton("Cancel",null).show()}
     private fun openWeb(){val q=input.text.toString().trim();if(q.isBlank()){Toast.makeText(this,"Type a search query first.",Toast.LENGTH_SHORT).show();return};startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/search?q="+Uri.encode(q))))}
@@ -256,11 +278,62 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun startVoice(){if(ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){ActivityCompat.requestPermissions(this,arrayOf(Manifest.permission.RECORD_AUDIO),91);return};if(!SpeechRecognizer.isRecognitionAvailable(this)){Toast.makeText(this,"Speech recognition unavailable",Toast.LENGTH_SHORT).show();return};recognizer?.destroy();recognizer=SpeechRecognizer.createSpeechRecognizer(this);recognizer!!.setRecognitionListener(object:RecognitionListener{override fun onResults(b:Bundle){b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let{input.setText(it);input.setSelection(input.text.length)}};override fun onError(e:Int){Toast.makeText(this@MainActivity,"Voice error",Toast.LENGTH_SHORT).show()};override fun onReadyForSpeech(p:Bundle?){status.text="● LISTENING"};override fun onEndOfSpeech(){status.text="● READY"};override fun onBeginningOfSpeech(){};override fun onRmsChanged(v:Float){};override fun onBufferReceived(b:ByteArray?){};override fun onPartialResults(b:Bundle?){};override fun onEvent(t:Int,p:Bundle?){}});recognizer!!.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)})}
     override fun onInit(s:Int){if(s==TextToSpeech.SUCCESS)tts?.language=Locale.getDefault()}
 
+    private fun addThinkingBubble(): TextView {
+        val tv=addBubble("•  •  •",false)
+        tv.textSize=22f
+        tv.gravity=Gravity.CENTER
+        tv.setTextColor(mutedColor())
+        return tv
+    }
+
+    private fun startThinkingAnimation(tv: TextView) {
+        stopThinkingAnimation()
+        val handler=android.os.Handler(mainLooper)
+        var phase=0
+        val r=object: Runnable {
+            override fun run() {
+                if (!tv.isAttachedToWindow || send.isEnabled) return
+                phase=(phase+1)%3
+                tv.text=when(phase){0->"•  •  •";1->"•  •  ●";else->"•  ●  •"}
+                tv.animate().translationY(-dp(3).toFloat()).setDuration(260).withEndAction {
+                    tv.animate().translationY(0f).setDuration(260).start()
+                }.start()
+                handler.postDelayed(this,520)
+            }
+        }
+        thinkingTimer=r
+        handler.post(r)
+    }
+
+    private fun stopThinkingAnimation() {
+        thinkingTimer?.let { android.os.Handler(mainLooper).removeCallbacks(it) }
+        thinkingTimer=null
+    }
+
+    private fun fetchWebContext(query:String): String {
+        if(query.isBlank()) return ""
+        return try {
+            val url=URL("https://html.duckduckgo.com/html/?q="+URLEncoder.encode(query,"UTF-8"))
+            val con=url.openConnection() as HttpURLConnection
+            con.requestMethod="GET"
+            con.connectTimeout=8000
+            con.readTimeout=10000
+            con.setRequestProperty("User-Agent","S.AI/5.0 Android")
+            val body=con.inputStream.bufferedReader().use{it.readText()}
+            con.disconnect()
+            body.replace(Regex("<script[\\s\\S]*?</script>")," ")
+                .replace(Regex("<style[\\s\\S]*?</style>")," ")
+                .replace(Regex("<[^>]+>")," ")
+                .replace("&amp;","&").replace("&quot;","\"").replace("&#x27;","'")
+                .replace(Regex("\\s+")," ").trim().take(14000)
+        } catch(_:Exception) { "" }
+    }
+
     private fun addBubble(text:String,user:Boolean):TextView{
         val tv=TextView(this).apply{
-            this.text=text;textSize=16f;setTextColor(Color.WHITE);setPadding(dp(16),dp(12),dp(16),dp(12))
+            this.text=text;textSize=16f;setTextColor(bubbleTextColor());setPadding(dp(16),dp(12),dp(16),dp(12))
             setLineSpacing(0f,1.08f)
-            background=if(user)rounded(Color.rgb(103,59,191),20f,Color.TRANSPARENT)else rounded(Color.rgb(25,26,34),20f,Color.rgb(39,40,50))
+            background=if(user)rounded(accentColor(),20f,Color.TRANSPARENT)else rounded(cardColor(),20f,borderColor())
         }
         val row=LinearLayout(this).apply{gravity=if(user)Gravity.END else Gravity.START;setPadding(0,dp(5),0,dp(5));tag=user}
         row.addView(tv,LinearLayout.LayoutParams((resources.displayMetrics.widthPixels*if (user) .82f else .9f).roundToInt(),-2))
@@ -271,7 +344,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun loadSaved() {
         val s = prefs.getString("visual", "") ?: ""
         if (s.isBlank()) {
-            addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.", false)
         } else {
             s.split("\n---\n").forEach { part ->
                 if (part.startsWith("U:")) addBubble(part.substring(2), true)
@@ -281,8 +353,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
     private fun newChat() {
         chat.removeAllViews()
-        prefs.edit().clear().apply()
-        addBubble("Йоу. Я Scrami AI.\nЛокальный ИИ прямо на твоём телефоне. Без API и без подписки.", false)
+        prefs.edit().remove("history").remove("visual").apply()
     }
     private fun saveVisual() {
         val a = mutableListOf<String>()
@@ -299,5 +370,5 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun dp(v:Int)= (v*resources.displayMetrics.density).roundToInt()
     private fun dp(v:Float)= (v*resources.displayMetrics.density).roundToInt()
     override fun onActivityResult(req:Int,res:Int,data:Intent?){super.onActivityResult(req,res,data);if(res==RESULT_OK&&data?.data!=null){if(req==45){input.setText("IMAGE ATTACHED. Describe the exact edit or analysis you want.");input.setSelection(input.text.length)}else{lifecycleScope.launch(Dispatchers.IO){val t=try{contentResolver.openInputStream(data.data!!)?.bufferedReader()?.use{it.readText().take(10000)}?:""}catch(_:Exception){""};withContext(Dispatchers.Main){input.setText(if(t.isBlank())"Attachment selected. Ask Scrami what to do with it." else "Analyze this document:\n"+t);input.setSelection(input.text.length)}}}}}
-    override fun onDestroy(){recognizer?.destroy();tts?.shutdown();super.onDestroy();val m=model;if(m!=null)lifecycleScope.launch(Dispatchers.IO){try{Llama.releaseModel(m)}catch(_:Exception){}}}
+    override fun onDestroy(){stopThinkingAnimation();recognizer?.destroy();tts?.shutdown();super.onDestroy();val m=model;if(m!=null)lifecycleScope.launch(Dispatchers.IO){try{Llama.releaseModel(m)}catch(_:Exception){}}}
 }

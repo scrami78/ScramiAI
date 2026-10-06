@@ -2,6 +2,8 @@ name: Build SCRAMI AI APK
 on:
   workflow_dispatch:
   push:
+    branches: [ "**" ]
+  pull_request:
     branches: [ main ]
 permissions:
   contents: read
@@ -21,8 +23,28 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10'
+      - name: Download bundled local model (build-time only)
+        run: |
+          mkdir -p app/src/main/assets
+          curl -L --fail --retry 3 --retry-delay 2 \
+            -o app/src/main/assets/qwen2.5-0.5b-instruct-q4_0.gguf \
+            https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf
+          test "$(stat -c%s app/src/main/assets/qwen2.5-0.5b-instruct-q4_0.gguf)" -gt 400000000
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
+      - name: Static security checks
+        run: |
+          set -e
+          if grep -RniE 'http://|android:allowBackup="true"|usesCleartextTraffic="true"|SECRET|api[_-]?key' app/src/main --exclude='*.xml' --exclude='*.gguf'; then
+            echo "Security check failed"
+            exit 1
+          fi
+          if grep -RniE 'android:allowBackup="true"|usesCleartextTraffic="true"' app/src/main --exclude='*.gguf'; then
+            echo "Android security flags check failed"
+            exit 1
+          fi
+      - name: Verify APK exists
+        run: ls -lh app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         with:
           name: SCRAMI-AI-debug
