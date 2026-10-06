@@ -257,7 +257,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             "dark" -> true
             "light" -> false
             else -> (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-        }\n    }
+        }
+    }
     private fun bgColor()=if(isDarkTheme())Color.rgb(8,9,13) else Color.WHITE
     private fun cardColor()=if(isDarkTheme())Color.rgb(25,26,34) else Color.rgb(247,247,249)
     private fun textColor()=if(isDarkTheme())Color.WHITE else Color.rgb(20,20,24)
