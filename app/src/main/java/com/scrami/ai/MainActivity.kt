@@ -245,11 +245,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun aboutDialog(){
-        AlertDialog.Builder(this).setTitle("About S.AI").setMessage("S.AI 5.1 — private AI assistant. Local-first, minimalist, and designed around your chats. The bundled 0.5B model works offline; stronger cloud models can be connected later without changing the interface.").setPositiveButton("OK",null).show()
+        AlertDialog.Builder(this).setTitle("About S.AI").setMessage("S.AI 6.0 — private AI assistant. Local-first, minimalist, and designed around your chats. The bundled 0.5B model works offline; stronger cloud models can be connected later without changing the interface.").setPositiveButton("OK",null).show()
     }
     private fun securityDialog(){
         AlertDialog.Builder(this).setTitle("Privacy & security")
-            .setMessage("S.AI 5.1 runs the language model locally. Chat history, profile name and memory stay in the app's private storage. Android controls installation and device security; S.AI does not bypass system security.")
+            .setMessage("S.AI 6.0 runs the language model locally. Chat history, profile name and memory stay in the app's private storage. Android controls installation and device security; S.AI does not bypass system security.")
             .setPositiveButton("OK",null).show()
     }
     private fun languageDialog(){
