@@ -25,7 +25,6 @@ import dev.ffmpegkit.llama.LlamaModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
@@ -39,11 +38,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var status: TextView
     private lateinit var progress: ProgressBar
     private lateinit var modelLabel: TextView
-    private val http = OkHttpClient()
     private val prefs by lazy { getSharedPreferences("scrami", MODE_PRIVATE) }
     private var model: LlamaModel? = null
-    private val fileName = "qwen2.5-0.5b-instruct-q4_0.gguf"
-    private val url = "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_0.gguf"
+    private val fileName = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+    private val modelAssetName = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
     private var currentMode = "SMART"
     private var tts: TextToSpeech? = null
     private var recognizer: SpeechRecognizer? = null
@@ -57,11 +55,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun buildUi() {
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.WHITE) }
+        val root = FrameLayout(this).apply { setBackgroundColor(Color.rgb(10,10,11)) }
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(10), dp(14), dp(8))
-            setBackgroundColor(Color.WHITE)
+            setBackgroundColor(Color.rgb(10,10,11))
         }
         val header = LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL; setPadding(0,dp(4),0,dp(8)) }
         val mark = TextView(this).apply {
@@ -89,11 +87,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val composer=LinearLayout(this).apply{gravity=Gravity.BOTTOM;setPadding(0,dp(4),0,dp(2))}
         val plus=TextView(this).apply{
             text="＋";textSize=27f;gravity=Gravity.CENTER;setTextColor(Color.BLACK)
-            background=rounded(Color.rgb(247,247,249),28f,Color.rgb(225,225,229));setOnClickListener{showAttachMenu()}
+            background=rounded(Color.rgb(25,26,30),28f,Color.rgb(55,56,62));setOnClickListener{showAttachMenu()}
         }
         composer.addView(plus,LinearLayout.LayoutParams(dp(54),dp(56)))
         input=EditText(this).apply{
-            hint="Message Scrami…";setHintTextColor(Color.rgb(145,145,150));setTextColor(Color.BLACK);textSize=16f
+            hint="Message S.AI";setHintTextColor(Color.rgb(145,145,150));setTextColor(Color.WHITE);textSize=16f
             setPadding(dp(15),dp(10),dp(12),dp(10));background=rounded(Color.rgb(247,247,249),25f,Color.rgb(225,225,229));maxLines=5
         }
         composer.addView(input,LinearLayout.LayoutParams(0,dp(56),1f).apply{leftMargin=dp(7)})
@@ -143,6 +141,25 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun pickImage(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="image/*";addCategory(Intent.CATEGORY_OPENABLE)},45)}
     private fun showMemory(){val m=prefs.getString("memory","")?:"";AlertDialog.Builder(this).setTitle("Scrami Memory").setMessage(if(m.isBlank())"Memory is empty. Say: “remember that …”" else m).setPositiveButton("Add"){_,_->val e=EditText(this);e.hint="What should Scrami remember?";AlertDialog.Builder(this).setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("memory",(m+"\n"+e.text.toString()).trim()).apply()}.setNegativeButton("Cancel",null).show()}.setNegativeButton("Clear"){_,_->prefs.edit().remove("memory").apply()}.show()}
     private fun accountDialog(){val current=prefs.getString("account","Scrami User")?:"Scrami User";val e=EditText(this);e.setText(current);e.hint="Account name";AlertDialog.Builder(this).setTitle("Scrami Account").setMessage("Local account on this device. Cloud sign-in can be connected later.").setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("account",e.text.toString().ifBlank{"Scrami User"}).apply();Toast.makeText(this,"Account saved",Toast.LENGTH_SHORT).show()}.setNegativeButton("Cancel",null).show()}
+    private fun settingsDialog(){
+        val choices=arrayOf("Auto","Dark","Light")
+        val current=prefs.getString("theme","AUTO")?:"AUTO"
+        val selected=choices.indexOfFirst{it.uppercase()==current}.coerceAtLeast(0)
+        AlertDialog.Builder(this).setTitle("Settings • Theme")
+            .setSingleChoiceItems(choices,selected){dialog,which->
+                prefs.edit().putString("theme",choices[which].uppercase()).apply()
+                dialog.dismiss()
+                Toast.makeText(this,"Theme: "+choices[which],Toast.LENGTH_SHORT).show()
+            }.setItems(arrayOf("Privacy & security","Memory","Account","About S.AI")){_,which->
+                when(which){0->securityDialog();1->showMemory();2->accountDialog();3->aboutDialog()}
+            }.setNegativeButton("Close",null).show()
+    }
+
+    private fun securityDialog(){
+        AlertDialog.Builder(this).setTitle("Privacy & security")
+            .setMessage("S.AI 5.1 runs the language model locally. Chat history, profile name and memory stay in the app's private storage. Android controls installation and device security; S.AI does not bypass system security.")
+            .setPositiveButton("OK",null).show()
+    }
     private fun languageDialog(){
         val locales=Locale.getAvailableLocales().distinctBy{it.toLanguageTag()}.sortedBy{it.getDisplayLanguage(Locale.getDefault())}
         val names=locales.take(300).map{val n=it.getDisplayLanguage(Locale.getDefault());if(n.isBlank())it.toLanguageTag() else n+" — "+it.toLanguageTag()}.toTypedArray()
@@ -166,41 +183,38 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun ensureModel() {
-        val file=File(getExternalFilesDir("models"),fileName)
-        if(file.exists() && file.length()>100_000_000){ready(file);return}
-        modelLabel.text="Downloading local model • ~429 MB"
-        status.text="FIRST RUN • DOWNLOAD REQUIRED"
-        lifecycleScope.launch(Dispatchers.IO){
-            try{
-                file.parentFile?.mkdirs()
-                val part=File(file.absolutePath+".part")
-                http.newCall(Request.Builder().url(url).build()).execute().use{r->
-                    if(!r.isSuccessful) error("HTTP "+r.code)
-                    val body=r.body?:error("Empty download")
-                    val total=body.contentLength();var done=0L
-                    body.byteStream().use{ins->FileOutputStream(part).use{out->
-                        val buf=ByteArray(64*1024)
-                        while(true){
-                            val n=ins.read(buf);if(n<0)break
-                            out.write(buf,0,n);done+=n
-                            if(total>0)withContext(Dispatchers.Main){
-                                val pct=(done*100/total).toInt();progress.progress=pct
-                                modelLabel.text="Downloading local model • "+pct+"%"
+        val file = File(filesDir, fileName)
+        if (file.exists() && file.length() > 450_000_000L) { ready(file); return }
+        modelLabel.text = "INSTALLING BUNDLED MODEL • 0%"
+        status.text = "LOCAL MODEL • INSTALLING"
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                assets.open(modelAssetName).use { input ->
+                    FileOutputStream(file).use { out ->
+                        val buf = ByteArray(1024 * 1024)
+                        var done = 0L
+                        val total = input.available().toLong()
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            out.write(buf, 0, n)
+                            done += n
+                            if (total > 0) withContext(Dispatchers.Main) {
+                                val pct = ((done * 100L) / total).toInt().coerceIn(0, 100)
+                                progress.progress = pct
+                                modelLabel.text = "INSTALLING BUNDLED MODEL • " + pct + "%"
                             }
                         }
-                    }}
+                    }
                 }
-                if(part.length()<100_000_000)error("Incomplete model")
-                if(file.exists())file.delete()
-                part.renameTo(file)
-                withContext(Dispatchers.Main){progress.progress=100}
-                ready(file)
-            }catch(e:Exception){
-                withContext(Dispatchers.Main){
-                    modelLabel.text="Download failed • tap here to retry"
-                    status.text="MODEL NOT READY"
-                    modelLabel.setOnClickListener{ensureModel()}
-                    Toast.makeText(this@MainActivity,e.message?:"Download error",Toast.LENGTH_LONG).show()
+                if (file.length() < 450_000_000L) error("Bundled model is incomplete")
+                withContext(Dispatchers.Main) { ready(file) }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    status.text = "MODEL INSTALL FAILED"
+                    modelLabel.text = "Tap to retry"
+                    modelLabel.setOnClickListener { ensureModel() }
+                    Toast.makeText(this@MainActivity, e.message ?: "Model error", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -234,7 +248,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 val answer=result.text.trim().ifBlank{"Не смог сформировать ответ."}
                 prefs.edit().putString("history",(history+"\nUSER: "+text+"\nASSISTANT: "+answer).takeLast(12000)).apply()
                 withContext(Dispatchers.Main){
-                    answerView.text=answer;status.text="● READY • PRIVATE";send.isEnabled=true;saveVisual()
+                    answerView.text=answer;status.text="● READY • LOCAL • PRIVATE";send.isEnabled=true;saveVisual()
                 }
             }catch(e:Exception){
                 withContext(Dispatchers.Main){answerView.text="Ошибка локальной модели: "+(e.message?:"unknown");status.text="● READY";send.isEnabled=true}
@@ -245,7 +259,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun modeName(m:String)=when(m){"FAST"->"⚡ FAST";"SMART"->"🧠 SMART";"CREATIVE"->"🎨 CREATIVE";"CODE"->"💻 CODE";else->"📚 STUDY"}
     private fun buildModeRow(row:LinearLayout){row.removeAllViews();listOf("FAST","SMART","CREATIVE","CODE","STUDY").forEach{m->row.addView(TextView(this).apply{text=modeName(m);textSize=10f;gravity=Gravity.CENTER;setPadding(dp(12),0,dp(12),0);setTextColor(if(m==currentMode)Color.BLACK else Color.WHITE);background=rounded(if(m==currentMode)Color.WHITE else Color.rgb(20,21,26),18f,Color.TRANSPARENT);setOnClickListener{currentMode=m;buildModeRow(row)}},LinearLayout.LayoutParams(dp(105),dp(34)).apply{rightMargin=dp(6)})}}
     private fun systemPromptForMode()=when(currentMode){"FAST"->"Ты Scrami AI FAST. Отвечай максимально быстро и кратко."; "CREATIVE"->"Ты Scrami AI CREATIVE. Ты креативный автор: музыка, тексты, идеи."; "CODE"->"Ты Scrami AI CODE. Ты senior программист. Давай рабочий код."; "STUDY"->"Ты Scrami AI STUDY. Объясняй школьные темы просто и с примерами."; else->"Ты Scrami AI SMART — личный помощник. Отвечай естественно и полезно. Если не знаешь — честно скажи."}
-    private fun showTools(){PopupMenu(this,send).apply{menu.add("＋ New chat");menu.add("💬 History");menu.add("🔎 Search");menu.add("🌐 Web");menu.add("📁 File");menu.add("🧮 Calculator");menu.add("🎨 Profile");menu.add("🔊 Read last answer");setOnMenuItemClickListener{when(it.title.toString()){"＋ New chat"->newChat();"💬 History"->showHistory();"🔎 Search"->searchHistory();"🌐 Web"->openWeb();"📁 File"->pickFile();"🧮 Calculator"->calculator();"🎨 Profile"->profile();"🔊 Read last answer"->speakLast()};true};show()}}
+    private fun showTools(){
+        AlertDialog.Builder(this).setTitle("S.AI")
+            .setItems(arrayOf("＋ New chat","💬 History","🔎 Search","🧠 Memory","👤 Account","⚙ Settings","🌐 Web","📁 File","🧮 Calculator","🔊 Read last answer")){_,which->
+                when(which){0->newChat();1->showHistory();2->searchHistory();3->showMemory();4->accountDialog();5->settingsDialog();6->openWeb();7->pickFile();8->calculator();9->speakLast()}
+            }.setNegativeButton("Close",null).show()
+    }
     private fun showHistory(){AlertDialog.Builder(this).setTitle("Chat history").setMessage((prefs.getString("history","")?:"").takeLast(5000).ifBlank{"No saved messages yet."}).setPositiveButton("OK",null).show()}
     private fun searchHistory(){val e=EditText(this);e.hint="Search history";AlertDialog.Builder(this).setTitle("Search").setView(e).setPositiveButton("Find"){_,_->val h=prefs.getString("history","")?:"";val q=e.text.toString();AlertDialog.Builder(this).setTitle("Results").setMessage(h.lines().filter{it.contains(q,true)}.joinToString("\n").take(5000).ifBlank{"Nothing found."}).setPositiveButton("OK",null).show()}.setNegativeButton("Cancel",null).show()}
     private fun openWeb(){val q=input.text.toString().trim();if(q.isBlank()){Toast.makeText(this,"Type a search query first.",Toast.LENGTH_SHORT).show();return};startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/search?q="+Uri.encode(q))))}
