@@ -250,7 +250,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val e=EditText(this).apply{
             hint="http://192.168.1.10:8787"
             setText(serverUrl())
-            singleLine=true
+            setSingleLine(true)
         }
         AlertDialog.Builder(this)
             .setTitle("S.AI Core")
