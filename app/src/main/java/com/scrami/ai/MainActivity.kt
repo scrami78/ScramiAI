@@ -82,7 +82,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         val names = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10),0,0,0) }
         names.addView(TextView(this).apply {
-            text = "S.AI 6.0"; textSize = 18f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE)
+            text = "S.AI 7.1"; textSize = 18f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE)
         })
         status = TextView(this).apply {
             text = "PRIVATE • LOCAL • FREE"; textSize = 9f; setTextColor(Color.rgb(116,120,132)); letterSpacing = .08f
@@ -165,7 +165,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         val footer = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(3),dp(4),dp(3),0) }
         val footerText = TextView(this).apply {
-            text = "S.AI 6.0  •  Local-first  •  Your chats stay on device"
+            text = "S.AI 7.1  •  Local-first  •  Your chats stay on device"
             textSize = 9f; setTextColor(Color.rgb(91,95,105))
         }
         footer.addView(footerText, LinearLayout.LayoutParams(0,-2,1f))
@@ -187,7 +187,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val side=LinearLayout(this).apply{
             orientation=LinearLayout.VERTICAL
             setPadding(dp(18),dp(34),dp(12),dp(12))
-            setBackgroundColor(Color.WHITE)
+            setBackgroundColor(Color.rgb(13,14,18))
             elevation=dp(8).toFloat()
         }
         side.addView(TextView(this).apply{
@@ -195,19 +195,19 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             setPadding(0,0,0,dp(20))
         })
         side.addView(TextView(this).apply{
-            text="＋  New chat";textSize=16f;setTextColor(Color.BLACK)
+            text="＋  New chat";textSize=16f;setTextColor(Color.WHITE)
             setPadding(0,dp(12),0,dp(12));setOnClickListener{newChat()}
         })
         side.addView(TextView(this).apply{
-            text="Chats";textSize=12f;setTextColor(Color.GRAY)
+            text="Chats";textSize=12f;setTextColor(Color.rgb(130,134,145))
             setPadding(0,dp(22),0,dp(8))
         })
         side.addView(TextView(this).apply{
             text=(prefs.getString("history","")?:"").lines().filter{it.startsWith("USER:")}.takeLast(30).asReversed().joinToString("\n"){it.removePrefix("USER:").trim()}
-            textSize=14f;setTextColor(Color.DKGRAY);setPadding(0,dp(4),0,dp(8))
+            textSize=14f;setTextColor(Color.rgb(220,222,230));setPadding(0,dp(4),0,dp(8))
         },LinearLayout.LayoutParams(-1,0,1f))
         side.addView(TextView(this).apply{
-            text="⚙  Settings";textSize=15f;setTextColor(Color.BLACK)
+            text="⚙  Settings";textSize=15f;setTextColor(Color.WHITE)
             setPadding(0,dp(16),0,dp(12));setOnClickListener{settingsDialog()}
         })
         return side
@@ -244,8 +244,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if(intent.resolveActivity(packageManager)==null){Toast.makeText(this,"Камера недоступна на устройстве.",Toast.LENGTH_SHORT).show();return}
         startActivityForResult(intent,46)
     }
-    private fun showMemory(){val m=prefs.getString("memory","")?:"";AlertDialog.Builder(this).setTitle("Scrami Memory").setMessage(if(m.isBlank())"Memory is empty. Say: “remember that …”" else m).setPositiveButton("Add"){_,_->val e=EditText(this);e.hint="What should Scrami remember?";AlertDialog.Builder(this).setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("memory",(m+"\n"+e.text.toString()).trim()).apply()}.setNegativeButton("Cancel",null).show()}.setNegativeButton("Clear"){_,_->prefs.edit().remove("memory").apply()}.show()}
-    private fun accountDialog(){val current=prefs.getString("account","Scrami User")?:"Scrami User";val e=EditText(this);e.setText(current);e.hint="Account name";AlertDialog.Builder(this).setTitle("Scrami Account").setMessage("Local account on this device. Cloud sign-in can be connected later.").setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("account",e.text.toString().ifBlank{"Scrami User"}).apply();Toast.makeText(this,"Account saved",Toast.LENGTH_SHORT).show()}.setNegativeButton("Cancel",null).show()}
+    private fun showMemory(){val m=prefs.getString("memory","")?:"";AlertDialog.Builder(this).setTitle("S.AI Memory").setMessage(if(m.isBlank())"Memory is empty. Say: “remember that …”" else m).setPositiveButton("Add"){_,_->val e=EditText(this);e.hint="What should Scrami remember?";AlertDialog.Builder(this).setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("memory",(m+"\n"+e.text.toString()).trim()).apply()}.setNegativeButton("Cancel",null).show()}.setNegativeButton("Clear"){_,_->prefs.edit().remove("memory").apply()}.show()}
+    private fun accountDialog(){val current=prefs.getString("account","Scrami User")?:"Scrami User";val e=EditText(this);e.setText(current);e.hint="Account name";AlertDialog.Builder(this).setTitle("S.AI Account").setMessage("Local account on this device. Cloud sign-in can be connected later.").setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("account",e.text.toString().ifBlank{"Scrami User"}).apply();Toast.makeText(this,"Account saved",Toast.LENGTH_SHORT).show()}.setNegativeButton("Cancel",null).show()}
     private fun settingsDialog(){
         val e=EditText(this).apply{
             hint="http://192.168.1.10:8787"
@@ -268,11 +268,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun aboutDialog(){
-        AlertDialog.Builder(this).setTitle("About S.AI").setMessage("S.AI 6.0 — private AI assistant. Local-first, minimalist, and designed around your chats. The bundled 0.5B model works offline; stronger cloud models can be connected later without changing the interface.").setPositiveButton("OK",null).show()
+        AlertDialog.Builder(this).setTitle("About S.AI").setMessage("S.AI 7.1 — private AI assistant. Local-first, minimalist, and designed around your chats. The bundled 0.5B model works offline; stronger cloud models can be connected later without changing the interface.").setPositiveButton("OK",null).show()
     }
     private fun securityDialog(){
         AlertDialog.Builder(this).setTitle("Privacy & security")
-            .setMessage("S.AI 6.0 runs the language model locally. Chat history, profile name and memory stay in the app's private storage. Android controls installation and device security; S.AI does not bypass system security.")
+            .setMessage("S.AI 7.1 runs the language model locally. Chat history, profile name and memory stay in the app's private storage. Android controls installation and device security; S.AI does not bypass system security.")
             .setPositiveButton("OK",null).show()
     }
     private fun languageDialog(){
@@ -393,7 +393,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     val answer=result.text.trim().ifBlank{"Не смог сформировать ответ."}
                     prefs.edit().putString("history",(history+"\nUSER: "+text+"\nASSISTANT: "+answer).takeLast(12000)).apply()
                     withContext(Dispatchers.Main){
-                        answerView.text=answer;status.text="● READY • S.AI CORE • LOCAL";modelLabel.text=result.model;send.isEnabled=true;saveVisual()
+                        answerView.text=answer + if(result.sources.isNotEmpty()) "\n\nИсточники:\n" + result.sources.mapIndexed { i, s -> "["+(i+1)+"] "+s.title+"\n"+s.url }.joinToString("\n") else "";status.text=if(result.sources.isNotEmpty()) "● READY • WEB + S.AI CORE" else "● READY • S.AI CORE • LOCAL";modelLabel.text=result.model;send.isEnabled=true;saveVisual()
                     }
                     return@launch
                 }
@@ -435,10 +435,28 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
     private fun showHistory(){AlertDialog.Builder(this).setTitle("Chat history").setMessage((prefs.getString("history","")?:"").takeLast(5000).ifBlank{"No saved messages yet."}).setPositiveButton("OK",null).show()}
     private fun searchHistory(){val e=EditText(this);e.hint="Search history";AlertDialog.Builder(this).setTitle("Search").setView(e).setPositiveButton("Find"){_,_->val h=prefs.getString("history","")?:"";val q=e.text.toString();AlertDialog.Builder(this).setTitle("Results").setMessage(h.lines().filter{it.contains(q,true)}.joinToString("\n").take(5000).ifBlank{"Nothing found."}).setPositiveButton("OK",null).show()}.setNegativeButton("Cancel",null).show()}
-    private fun openWeb(){val q=input.text.toString().trim();if(q.isBlank()){Toast.makeText(this,"Type a search query first.",Toast.LENGTH_SHORT).show();return};startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/search?q="+Uri.encode(q))))}
+    private fun openWeb(){
+        val q=input.text.toString().trim()
+        if(q.isBlank()){Toast.makeText(this,"Напиши запрос для поиска.",Toast.LENGTH_SHORT).show();return}
+        val base=serverUrl()
+        if(base.isBlank()){addBubble("Для веб-поиска подключи S.AI Core в настройках. Офлайн-режим остаётся доступен.",false);return}
+        addBubble("🔎 Ищу в интернете: "+q,false)
+        lifecycleScope.launch(Dispatchers.IO){
+            try{
+                val results=SaiServerClient.search(base,q)
+                withContext(Dispatchers.Main){
+                    if(results.isEmpty()){addBubble("Ничего не нашёл или веб-поиск временно недоступен.",false)}
+                    else{
+                        val text=results.mapIndexed{index,r->"["+(index+1)+"] "+r.title+"\n"+r.url+"\n"+r.snippet}.joinToString("\n\n")
+                        addBubble(text,false);saveVisual()
+                    }
+                }
+            }catch(e:Exception){withContext(Dispatchers.Main){addBubble("Ошибка веб-поиска: "+(e.message?:"unknown"),false)}}
+        }
+    }
     private fun pickFile(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="*/*";addCategory(Intent.CATEGORY_OPENABLE)},44)}
     private fun calculator(){val e=EditText(this);e.hint="Example: 42";AlertDialog.Builder(this).setTitle("Calculator").setView(e).setPositiveButton("Calculate"){_,_->Toast.makeText(this,e.text.toString().toDoubleOrNull()?.toString()?:"Use a number",Toast.LENGTH_SHORT).show()}.show()}
-    private fun profile(){val e=EditText(this);e.hint="How should Scrami speak?";e.setText(prefs.getString("style","friendly, confident, natural"));AlertDialog.Builder(this).setTitle("Scrami Profile").setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("style",e.text.toString()).apply()}.show()}
+    private fun profile(){val e=EditText(this);e.hint="How should Scrami speak?";e.setText(prefs.getString("style","friendly, confident, natural"));AlertDialog.Builder(this).setTitle("S.AI Profile").setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("style",e.text.toString()).apply()}.show()}
     private fun speakLast(){val h=prefs.getString("history","")?:"";val last=h.substringAfterLast("ASSISTANT:").trim();if(last.isNotBlank())tts?.speak(last,TextToSpeech.QUEUE_FLUSH,null,"scrami")}
     private fun startVoice(){if(ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){ActivityCompat.requestPermissions(this,arrayOf(Manifest.permission.RECORD_AUDIO),91);return};if(!SpeechRecognizer.isRecognitionAvailable(this)){Toast.makeText(this,"Speech recognition unavailable",Toast.LENGTH_SHORT).show();return};recognizer?.destroy();recognizer=SpeechRecognizer.createSpeechRecognizer(this);recognizer!!.setRecognitionListener(object:RecognitionListener{override fun onResults(b:Bundle){b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let{input.setText(it);input.setSelection(input.text.length)}};override fun onError(e:Int){Toast.makeText(this@MainActivity,"Voice error",Toast.LENGTH_SHORT).show()};override fun onReadyForSpeech(p:Bundle?){status.text="● LISTENING"};override fun onEndOfSpeech(){status.text="● READY"};override fun onBeginningOfSpeech(){};override fun onRmsChanged(v:Float){};override fun onBufferReceived(b:ByteArray?){};override fun onPartialResults(b:Bundle?){};override fun onEvent(t:Int,p:Bundle?){}});recognizer!!.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)})}
     override fun onInit(s:Int){if(s==TextToSpeech.SUCCESS)tts?.language=Locale.getDefault()}
@@ -447,7 +465,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val tv=TextView(this).apply{
             this.text=text;textSize=16f;setTextColor(Color.WHITE);setPadding(dp(16),dp(12),dp(16),dp(12))
             setLineSpacing(0f,1.08f)
-            background=if(user)rounded(Color.rgb(103,59,191),20f,Color.TRANSPARENT)else rounded(Color.rgb(25,26,34),20f,Color.rgb(39,40,50))
+            background=if(user)rounded(Color.rgb(34,36,43),20f,Color.rgb(58,61,70))else rounded(Color.rgb(18,20,25),20f,Color.rgb(43,46,54))
         }
         val row=LinearLayout(this).apply{gravity=if(user)Gravity.END else Gravity.START;setPadding(0,dp(5),0,dp(5));tag=user}
         row.addView(tv,LinearLayout.LayoutParams((resources.displayMetrics.widthPixels*if (user) .82f else .9f).roundToInt(),-2))
