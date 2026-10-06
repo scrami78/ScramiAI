@@ -9,8 +9,8 @@ android {
         applicationId = "com.scrami.ai"
         minSdk = 26
         targetSdk = 35
-        versionCode = 8
-        versionName = "5.3"
+        versionCode = 9
+        versionName = "6.0"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
