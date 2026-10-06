@@ -1,6 +1,10 @@
 import base64
 import io
 import os
+import re
+import urllib.parse
+import urllib.request
+from html.parser import HTMLParser
 from functools import lru_cache
 
 import torch
@@ -20,13 +24,27 @@ class ChatRequest(BaseModel):
     history: str = ""
     memory: str = ""
     mode: str = "SMART"
+    use_web: bool = True
     max_tokens: int = Field(default=900, ge=64, le=4096)
+
+
+class SearchItem(BaseModel):
+    title: str
+    url: str
+    snippet: str = ""
 
 
 class ChatResponse(BaseModel):
     text: str
     model: str
     device: str
+    language: str = "unknown"
+    sources: list[SearchItem] = []
+
+
+class SearchResponse(BaseModel):
+    query: str
+    results: list[SearchItem]
 
 
 class ImageRequest(BaseModel):
@@ -40,6 +58,67 @@ class ImageResponse(BaseModel):
     image_base64: str
     model: str
     device: str
+
+
+class DDGParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.results = []
+        self._title = ""
+        self._url = ""
+        self._snippet = ""
+        self._mode = None
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        cls = attrs.get("class", "")
+        if tag == "a" and "result__a" in cls:
+            self._mode = "title"
+            self._url = attrs.get("href", "")
+        elif "result__snippet" in cls:
+            self._mode = "snippet"
+
+    def handle_data(self, data):
+        if self._mode == "title": self._title += data
+        elif self._mode == "snippet": self._snippet += data
+
+    def handle_endtag(self, tag):
+        if tag == "a" and self._mode == "title":
+            if self._title.strip() and self._url:
+                self.results.append(SearchItem(title=self._title.strip(), url=self._url, snippet=self._snippet.strip()))
+            self._title, self._url, self._snippet, self._mode = "", "", "", None
+
+
+def detect_language(text: str) -> str:
+    if re.search(r"[А-Яа-яЁё]", text): return "Russian"
+    if re.search(r"[ЇїІіЄєҐґ]", text): return "Ukrainian"
+    if re.search(r"[一-鿿]", text): return "Chinese"
+    if re.search(r"[ぁ-ゟァ-ヿ]", text): return "Japanese"
+    if re.search(r"[가-힣]", text): return "Korean"
+    return "English"
+
+
+def web_search(query: str, limit: int = 5) -> list[SearchItem]:
+    q = urllib.parse.quote_plus(query[:500])
+    req = urllib.request.Request(
+        "https://html.duckduckgo.com/html/?q=" + q,
+        headers={"User-Agent": "S.AI/7.1 (local AI assistant)"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
+        parser = DDGParser()
+        parser.feed(html)
+        return parser.results[:limit]
+    except Exception:
+        return []
+
+
+def needs_web(text: str) -> bool:
+    t = text.lower()
+    triggers = ("сегодня", "сейчас", "последн", "новост", "цена", "курс", "погода", "найди", "поищи",
+                "кто сейчас", "что произошло", "latest", "today", "now", "news", "price", "weather", "search", "find")
+    return any(x in t for x in triggers) or "http://" in t or "https://" in t
 
 
 @lru_cache(maxsize=1)
@@ -85,10 +164,21 @@ def health():
 @app.post("/v1/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
     tokenizer, model = chat_pipeline()
+    language = detect_language(req.message)
+    sources = web_search(req.message) if req.use_web and needs_web(req.message) else []
+    source_text = "\n".join(f"[{i+1}] {s.title} — {s.url}\n{s.snippet}" for i, s in enumerate(sources))
+    language_rule = (
+        f"Answer ONLY in {language}, matching the user's wording and script. "
+        "Do not switch to Chinese, English, or another language unless explicitly asked. "
+        "Never output Chinese characters accidentally. " if language == "Russian" else
+        f"Answer ONLY in {language}, matching the user's wording and script. "
+    )
     system = (
-        "You are S.AI, a private general-purpose assistant. "
-        "Be accurate, useful, concise when possible, and never invent tool access. "
-        f"Mode: {req.mode}. Memory: {req.memory[-6000:]}"
+        "You are S.AI, a private general-purpose assistant. Be accurate, useful and natural. "
+        "Never invent tool access or sources. " + language_rule +
+        f"Mode: {req.mode}. Memory: {req.memory[-6000:]}\n"
+        "If web sources are provided, use them for current facts and cite them as [1], [2], etc. "
+        "Do not claim you searched if the source list is empty.\nWEB SOURCES:\n" + source_text
     )
     messages = [{"role": "system", "content": system}]
     if req.history:
@@ -109,7 +199,7 @@ def chat(req: ChatRequest):
         )
     generated = output[0][inputs["input_ids"].shape[1]:]
     text = tokenizer.decode(generated, skip_special_tokens=True).strip()
-    return ChatResponse(text=text, model=CHAT_MODEL, device=DEVICE)
+    return ChatResponse(text=text, model=CHAT_MODEL, device=DEVICE, language=language, sources=sources)
 
 
 @app.post("/v1/image", response_model=ImageResponse)
@@ -130,3 +220,11 @@ def image(req: ImageRequest):
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/v1/search", response_model=SearchResponse)
+def search(req: dict):
+    query = str(req.get("query", "")).strip()
+    if not query:
+        return SearchResponse(query="", results=[])
+    return SearchResponse(query=query, results=web_search(query, 8))
