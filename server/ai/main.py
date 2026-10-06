@@ -73,20 +73,27 @@ class DDGParser(HTMLParser):
         attrs = dict(attrs)
         cls = attrs.get("class", "")
         if tag == "a" and "result__a" in cls:
+            if self._title.strip() and self._url:
+                self.results.append(SearchItem(title=self._title.strip(), url=self._url, snippet=self._snippet.strip()))
+            self._title, self._url, self._snippet = "", attrs.get("href", ""), ""
             self._mode = "title"
-            self._url = attrs.get("href", "")
         elif "result__snippet" in cls:
             self._mode = "snippet"
 
     def handle_data(self, data):
-        if self._mode == "title": self._title += data
-        elif self._mode == "snippet": self._snippet += data
+        if self._mode == "title":
+            self._title += data
+        elif self._mode == "snippet":
+            self._snippet += data
 
     def handle_endtag(self, tag):
         if tag == "a" and self._mode == "title":
-            if self._title.strip() and self._url:
-                self.results.append(SearchItem(title=self._title.strip(), url=self._url, snippet=self._snippet.strip()))
-            self._title, self._url, self._snippet, self._mode = "", "", "", None
+            self._mode = None
+
+    def close(self):
+        super().close()
+        if self._title.strip() and self._url:
+            self.results.append(SearchItem(title=self._title.strip(), url=self._url, snippet=self._snippet.strip()))
 
 
 def detect_language(text: str) -> str:
