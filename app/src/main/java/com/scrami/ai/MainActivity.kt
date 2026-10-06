@@ -27,6 +27,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -43,6 +46,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var currentMode = "SMART"
     private var tts: TextToSpeech? = null
     private var recognizer: SpeechRecognizer? = null
+    private var thinkingTimer: Runnable? = null
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
@@ -223,21 +227,23 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun sendMessage(){
         val text=input.text.toString().trim();if(text.isEmpty())return
         val loaded=model?:run{Toast.makeText(this,"Модель ещё загружается.",Toast.LENGTH_SHORT).show();return}
-        input.setText("");addBubble(text,true);val answerView=addBubble("Думаю…",false);send.isEnabled=false;status.text="● THINKING LOCALLY"
+        input.setText("");addBubble(text,true);val answerView=addThinkingBubble();send.isEnabled=false;status.text="● THINKING";startThinkingAnimation(answerView)
         lifecycleScope.launch(Dispatchers.IO){
             try{
                 val history=prefs.getString("history","")?:""
                 if(text.lowercase().startsWith("remember ")){val m=prefs.getString("memory","")?:"";prefs.edit().putString("memory",(m+"\n"+text.substring(9).trim()).trim()).apply()}
                 val memory=prefs.getString("memory","")?:""
-                val prompt=if(history.isBlank())text else "MEMORY:\n"+memory.takeLast(3000)+"\n"+history.takeLast(7000)+"\nUSER: "+text+"\nASSISTANT:"
+                val webContext = if (text.startsWith("/web ", true) || text.startsWith("web: ", true)) fetchWebContext(text.substringAfter(" ").trim()) else ""
+                val promptBase=if(history.isBlank())text else "MEMORY:\n"+memory.takeLast(3000)+"\n"+history.takeLast(7000)+"\nUSER: "+text+"\nASSISTANT:"
+                val prompt=if(webContext.isBlank()) promptBase else "INTERNET SEARCH RESULTS:\n"+webContext.takeLast(12000)+"\n\n"+promptBase
                 val result=Llama.complete(loaded,prompt=prompt,systemPrompt=systemPromptForMode(),maxTokens=if(currentMode=="FAST")220 else 480)
                 val answer=result.text.trim().ifBlank{"Не смог сформировать ответ."}
                 prefs.edit().putString("history",(history+"\nUSER: "+text+"\nASSISTANT: "+answer).takeLast(12000)).apply()
                 withContext(Dispatchers.Main){
-                    answerView.text=answer;status.text="● READY • PRIVATE";send.isEnabled=true;saveVisual()
+                    stopThinkingAnimation();answerView.text=answer;status.text="● READY • PRIVATE";send.isEnabled=true;saveVisual()
                 }
             }catch(e:Exception){
-                withContext(Dispatchers.Main){answerView.text="Ошибка локальной модели: "+(e.message?:"unknown");status.text="● READY";send.isEnabled=true}
+                withContext(Dispatchers.Main){stopThinkingAnimation();answerView.text="Ошибка локальной модели: "+(e.message?:"unknown");status.text="● READY";send.isEnabled=true}
             }
         }
     }
@@ -246,7 +252,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun buildModeRow(row:LinearLayout){row.removeAllViews();listOf("FAST","SMART","CREATIVE","CODE","STUDY").forEach{m->row.addView(TextView(this).apply{text=modeName(m);textSize=10f;gravity=Gravity.CENTER;setPadding(dp(12),0,dp(12),0);setTextColor(if(m==currentMode)Color.BLACK else Color.rgb(90,90,96));background=rounded(if(m==currentMode)Color.rgb(242,242,245) else Color.rgb(250,250,252),18f,Color.rgb(230,230,234));setOnClickListener{currentMode=m;buildModeRow(row)}},LinearLayout.LayoutParams(dp(105),dp(34)).apply{rightMargin=dp(6)})}}
     private fun systemPromptForMode()=when(currentMode){"FAST"->"Ты Scrami AI FAST. Отвечай максимально быстро и кратко."; "CREATIVE"->"Ты Scrami AI CREATIVE. Ты креативный автор: музыка, тексты, идеи."; "CODE"->"Ты Scrami AI CODE. Ты senior программист. Давай рабочий код."; "STUDY"->"Ты Scrami AI STUDY. Объясняй школьные темы просто и с примерами."; else->"Ты S.AI — качественный персональный ИИ-помощник, созданный Scrami. Если тебя спрашивают, кто тебя создал или кто твой создатель, отвечай прямо: «Меня создал Scrami». Не выдумывай другого создателя. Отвечай естественно, уверенно и по существу. Не повторяй вопрос пользователя, не начинай каждый ответ с приветствия и не говори о себе без причины. Не выдумывай факты; если информации недостаточно, прямо скажи об этом. Соблюдай контекст диалога. Отвечай на языке пользователя. Форматируй длинные ответы понятно: короткие абзацы, списки и код там, где это уместно."}
     private fun applyThemePreference(){ if(!prefs.contains("theme")) prefs.edit().putString("theme","auto").apply() }
-    private fun isDarkTheme(): Boolean {\n        return when (prefs.getString("theme","auto")) {\n            "dark" -> true\n            "light" -> false\n            else -> (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES\n        }\n    }
+    private fun isDarkTheme(): Boolean {
+        return when (prefs.getString("theme","auto")) {\n            "dark" -> true\n            "light" -> false\n            else -> (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES\n        }\n    }
     private fun bgColor()=if(isDarkTheme())Color.rgb(8,9,13) else Color.WHITE
     private fun cardColor()=if(isDarkTheme())Color.rgb(25,26,34) else Color.rgb(247,247,249)
     private fun textColor()=if(isDarkTheme())Color.WHITE else Color.rgb(20,20,24)
@@ -265,6 +272,57 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun speakLast(){val h=prefs.getString("history","")?:"";val last=h.substringAfterLast("ASSISTANT:").trim();if(last.isNotBlank())tts?.speak(last,TextToSpeech.QUEUE_FLUSH,null,"scrami")}
     private fun startVoice(){if(ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){ActivityCompat.requestPermissions(this,arrayOf(Manifest.permission.RECORD_AUDIO),91);return};if(!SpeechRecognizer.isRecognitionAvailable(this)){Toast.makeText(this,"Speech recognition unavailable",Toast.LENGTH_SHORT).show();return};recognizer?.destroy();recognizer=SpeechRecognizer.createSpeechRecognizer(this);recognizer!!.setRecognitionListener(object:RecognitionListener{override fun onResults(b:Bundle){b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let{input.setText(it);input.setSelection(input.text.length)}};override fun onError(e:Int){Toast.makeText(this@MainActivity,"Voice error",Toast.LENGTH_SHORT).show()};override fun onReadyForSpeech(p:Bundle?){status.text="● LISTENING"};override fun onEndOfSpeech(){status.text="● READY"};override fun onBeginningOfSpeech(){};override fun onRmsChanged(v:Float){};override fun onBufferReceived(b:ByteArray?){};override fun onPartialResults(b:Bundle?){};override fun onEvent(t:Int,p:Bundle?){}});recognizer!!.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)})}
     override fun onInit(s:Int){if(s==TextToSpeech.SUCCESS)tts?.language=Locale.getDefault()}
+
+    private fun addThinkingBubble(): TextView {
+        val tv=addBubble("•  •  •",false)
+        tv.textSize=22f
+        tv.gravity=Gravity.CENTER
+        tv.setTextColor(mutedColor())
+        return tv
+    }
+
+    private fun startThinkingAnimation(tv: TextView) {
+        stopThinkingAnimation()
+        val handler=android.os.Handler(mainLooper)
+        var phase=0
+        val r=object: Runnable {
+            override fun run() {
+                if (!tv.isAttachedToWindow || send.isEnabled) return
+                phase=(phase+1)%3
+                tv.text=when(phase){0->"•  •  •";1->"•  •  ●";else->"•  ●  •"}
+                tv.animate().translationY(-dp(3).toFloat()).setDuration(260).withEndAction {
+                    tv.animate().translationY(0f).setDuration(260).start()
+                }.start()
+                handler.postDelayed(this,520)
+            }
+        }
+        thinkingTimer=r
+        handler.post(r)
+    }
+
+    private fun stopThinkingAnimation() {
+        thinkingTimer?.let { android.os.Handler(mainLooper).removeCallbacks(it) }
+        thinkingTimer=null
+    }
+
+    private fun fetchWebContext(query:String): String {
+        if(query.isBlank()) return ""
+        return try {
+            val url=URL("https://html.duckduckgo.com/html/?q="+URLEncoder.encode(query,"UTF-8"))
+            val con=url.openConnection() as HttpURLConnection
+            con.requestMethod="GET"
+            con.connectTimeout=8000
+            con.readTimeout=10000
+            con.setRequestProperty("User-Agent","S.AI/5.0 Android")
+            val body=con.inputStream.bufferedReader().use{it.readText()}
+            con.disconnect()
+            body.replace(Regex("<script[\\s\\S]*?</script>")," ")
+                .replace(Regex("<style[\\s\\S]*?</style>")," ")
+                .replace(Regex("<[^>]+>")," ")
+                .replace("&amp;","&").replace("&quot;",""").replace("&#x27;","'")
+                .replace(Regex("\\s+")," ").trim().take(14000)
+        } catch(_:Exception) { "" }
+    }
 
     private fun addBubble(text:String,user:Boolean):TextView{
         val tv=TextView(this).apply{
@@ -307,5 +365,5 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun dp(v:Int)= (v*resources.displayMetrics.density).roundToInt()
     private fun dp(v:Float)= (v*resources.displayMetrics.density).roundToInt()
     override fun onActivityResult(req:Int,res:Int,data:Intent?){super.onActivityResult(req,res,data);if(res==RESULT_OK&&data?.data!=null){if(req==45){input.setText("IMAGE ATTACHED. Describe the exact edit or analysis you want.");input.setSelection(input.text.length)}else{lifecycleScope.launch(Dispatchers.IO){val t=try{contentResolver.openInputStream(data.data!!)?.bufferedReader()?.use{it.readText().take(10000)}?:""}catch(_:Exception){""};withContext(Dispatchers.Main){input.setText(if(t.isBlank())"Attachment selected. Ask Scrami what to do with it." else "Analyze this document:\n"+t);input.setSelection(input.text.length)}}}}}
-    override fun onDestroy(){recognizer?.destroy();tts?.shutdown();super.onDestroy();val m=model;if(m!=null)lifecycleScope.launch(Dispatchers.IO){try{Llama.releaseModel(m)}catch(_:Exception){}}}
+    override fun onDestroy(){stopThinkingAnimation();recognizer?.destroy();tts?.shutdown();super.onDestroy();val m=model;if(m!=null)lifecycleScope.launch(Dispatchers.IO){try{Llama.releaseModel(m)}catch(_:Exception){}}}
 }
