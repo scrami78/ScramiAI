@@ -1,0 +1,40 @@
+name: Publish S.AI 5.1 from Run #79
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download APK artifact from Run #79
+        uses: actions/download-artifact@v5
+        with:
+          name: SCRAMI-AI-5.1
+          path: release
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 37395647175
+
+      - name: Prepare release APK
+        run: |
+          set -e
+          APK="$(find release -type f -name '*.apk' | head -n 1)"
+          test -n "$APK"
+          cp "$APK" SAI-5.1.apk
+          ls -lh SAI-5.1.apk
+          sha256sum SAI-5.1.apk
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v5.1 \
+            --repo "${{ github.repository }}" \
+            --title "S.AI 5.1" \
+            --notes "S.AI 5.1 APK built and verified by GitHub Actions (Run #79)." \
+            --target main \
+            SAI-5.1.apk
