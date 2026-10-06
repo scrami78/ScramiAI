@@ -34,7 +34,7 @@ class Game(ctx:Context):View(ctx){
  fun end(c:Canvas){t(c,if(hp<=0)"SIGNAL LOST" else "SIGNAL FOUND",90f,160f,50f);t(c,if(hp<=0)"Something reached you." else "The city finally answered.",95f,205f,18f,Color.LTGRAY);r(c,90f,270f,390f,335f,Color.WHITE);t(c,"PLAY AGAIN",160f,310f,20f,Color.BLACK)}
  override fun onTouchEvent(e:MotionEvent):Boolean{
   if(e.action!=MotionEvent.ACTION_DOWN)return true
-  val a=e.px;val b=e.py
+  val a=e.x;val b=e.y
   if(screen==0){if(b in 220f..330f){screen=1;reset()};invalidate();return true}
   if(screen==2){screen=0;invalidate();return true}
   if(phone){if(!(a in 350f..910f&&b in 50f..640f))phone=false;invalidate();return true}
