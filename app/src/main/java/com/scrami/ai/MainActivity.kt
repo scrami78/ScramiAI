@@ -253,7 +253,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun systemPromptForMode()=when(currentMode){"FAST"->"Ты Scrami AI FAST. Отвечай максимально быстро и кратко."; "CREATIVE"->"Ты Scrami AI CREATIVE. Ты креативный автор: музыка, тексты, идеи."; "CODE"->"Ты Scrami AI CODE. Ты senior программист. Давай рабочий код."; "STUDY"->"Ты Scrami AI STUDY. Объясняй школьные темы просто и с примерами."; else->"Ты S.AI — качественный персональный ИИ-помощник, созданный Scrami. Если тебя спрашивают, кто тебя создал или кто твой создатель, отвечай прямо: «Меня создал Scrami». Не выдумывай другого создателя. Отвечай естественно, уверенно и по существу. Не повторяй вопрос пользователя, не начинай каждый ответ с приветствия и не говори о себе без причины. Не выдумывай факты; если информации недостаточно, прямо скажи об этом. Соблюдай контекст диалога. Отвечай на языке пользователя. Форматируй длинные ответы понятно: короткие абзацы, списки и код там, где это уместно."}
     private fun applyThemePreference(){ if(!prefs.contains("theme")) prefs.edit().putString("theme","auto").apply() }
     private fun isDarkTheme(): Boolean {
-        return when (prefs.getString("theme","auto")) {\n            "dark" -> true\n            "light" -> false\n            else -> (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES\n        }\n    }
+        return when (prefs.getString("theme","auto")) {
+            "dark" -> true
+            "light" -> false
+            else -> (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }\n    }
     private fun bgColor()=if(isDarkTheme())Color.rgb(8,9,13) else Color.WHITE
     private fun cardColor()=if(isDarkTheme())Color.rgb(25,26,34) else Color.rgb(247,247,249)
     private fun textColor()=if(isDarkTheme())Color.WHITE else Color.rgb(20,20,24)
@@ -319,7 +323,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             body.replace(Regex("<script[\\s\\S]*?</script>")," ")
                 .replace(Regex("<style[\\s\\S]*?</style>")," ")
                 .replace(Regex("<[^>]+>")," ")
-                .replace("&amp;","&").replace("&quot;",""").replace("&#x27;","'")
+                .replace("&amp;","&").replace("&quot;","\"").replace("&#x27;","'")
                 .replace(Regex("\\s+")," ").trim().take(14000)
         } catch(_:Exception) { "" }
     }
