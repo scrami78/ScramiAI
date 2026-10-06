@@ -1,6 +1,10 @@
 name: Publish S.AI 5.1 from Run #79
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-sai-5.1.yml'
   workflow_dispatch:
 
 permissions:
