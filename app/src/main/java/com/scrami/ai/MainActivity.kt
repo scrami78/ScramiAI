@@ -68,7 +68,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         header.addView(mark,LinearLayout.LayoutParams(dp(40),dp(40)))
         val titleBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),0,0,0)}
-        titleBox.addView(TextView(this).apply{text="S.AI";textSize=18f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK)})
+        titleBox.addView(TextView(this).apply{text="S.AI";textSize=18f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE)})
         status=TextView(this).apply{text="PRIVATE • LOCAL • FREE";textSize=9f;setTextColor(Color.rgb(105,105,112));letterSpacing=.08f}
         titleBox.addView(status)
         header.addView(titleBox,LinearLayout.LayoutParams(0,-2,1f))
@@ -104,7 +104,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         composer.addView(send,LinearLayout.LayoutParams(dp(56),dp(56)).apply{leftMargin=dp(6)})
         main.addView(composer)
 
-        modelLabel=TextView(this).apply{text="Preparing local model…";textSize=10f;setTextColor(Color.rgb(120,120,125));gravity=Gravity.CENTER}
+        modelLabel=TextView(this).apply{text="Preparing S.AI…";textSize=10f;setTextColor(Color.rgb(120,120,125));gravity=Gravity.CENTER}
         progress=ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal).apply{max=100}
         val modelBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;addView(modelLabel);addView(progress,LinearLayout.LayoutParams(-1,dp(3)))}
         main.addView(modelBox,LinearLayout.LayoutParams(-1,dp(30)))
@@ -155,6 +155,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }.setNegativeButton("Close",null).show()
     }
 
+    private fun aboutDialog(){
+        AlertDialog.Builder(this).setTitle("About S.AI").setMessage("S.AI 5.1 — private AI assistant. Local-first, minimalist, and designed around your chats. The bundled 0.5B model works offline; stronger cloud models can be connected later without changing the interface.").setPositiveButton("OK",null).show()
+    }
     private fun securityDialog(){
         AlertDialog.Builder(this).setTitle("Privacy & security")
             .setMessage("S.AI 5.1 runs the language model locally. Chat history, profile name and memory stay in the app's private storage. Android controls installation and device security; S.AI does not bypass system security.")
@@ -221,7 +224,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun ready(file:File){
-        modelLabel.text="LOCAL MODEL • QWEN 0.5B"
+        modelLabel.text="LOCAL MODEL • QWEN 0.5B • OFFLINE"
         status.text="● READY • PRIVATE • FREE"
         status.setTextColor(Color.rgb(107,220,150))
         lifecycleScope.launch(Dispatchers.IO){
@@ -243,7 +246,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 val history=prefs.getString("history","")?:""
                 if(text.lowercase().startsWith("remember ")){val m=prefs.getString("memory","")?:"";prefs.edit().putString("memory",(m+"\n"+text.substring(9).trim()).trim()).apply()}
                 val memory=prefs.getString("memory","")?:""
-                val prompt=if(history.isBlank())text else "MEMORY:\n"+memory.takeLast(3000)+"\n"+history.takeLast(7000)+"\nUSER: "+text+"\nASSISTANT:"
+                val style=prefs.getString("style","friendly, confident, natural")?: "friendly, confident, natural"
+                val prompt="MEMORY:\n"+memory.takeLast(3000)+"\nSTYLE:\n"+style+"\nCONVERSATION:\n"+history.takeLast(7000)+"\nUSER: "+text+"\nASSISTANT:"
                 val result=Llama.complete(loaded,prompt=prompt,systemPrompt=systemPromptForMode(),maxTokens=if(currentMode=="FAST")220 else 480)
                 val answer=result.text.trim().ifBlank{"Не смог сформировать ответ."}
                 prefs.edit().putString("history",(history+"\nUSER: "+text+"\nASSISTANT: "+answer).takeLast(12000)).apply()
@@ -258,7 +262,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun modeName(m:String)=when(m){"FAST"->"⚡ FAST";"SMART"->"🧠 SMART";"CREATIVE"->"🎨 CREATIVE";"CODE"->"💻 CODE";else->"📚 STUDY"}
     private fun buildModeRow(row:LinearLayout){row.removeAllViews();listOf("FAST","SMART","CREATIVE","CODE","STUDY").forEach{m->row.addView(TextView(this).apply{text=modeName(m);textSize=10f;gravity=Gravity.CENTER;setPadding(dp(12),0,dp(12),0);setTextColor(if(m==currentMode)Color.BLACK else Color.WHITE);background=rounded(if(m==currentMode)Color.WHITE else Color.rgb(20,21,26),18f,Color.TRANSPARENT);setOnClickListener{currentMode=m;buildModeRow(row)}},LinearLayout.LayoutParams(dp(105),dp(34)).apply{rightMargin=dp(6)})}}
-    private fun systemPromptForMode()=when(currentMode){"FAST"->"Ты Scrami AI FAST. Отвечай максимально быстро и кратко."; "CREATIVE"->"Ты Scrami AI CREATIVE. Ты креативный автор: музыка, тексты, идеи."; "CODE"->"Ты Scrami AI CODE. Ты senior программист. Давай рабочий код."; "STUDY"->"Ты Scrami AI STUDY. Объясняй школьные темы просто и с примерами."; else->"Ты Scrami AI SMART — личный помощник. Отвечай естественно и полезно. Если не знаешь — честно скажи."}
+    private fun systemPromptForMode()=when(currentMode){"FAST"->"Ты Scrami AI FAST. Отвечай максимально быстро и кратко."; "CREATIVE"->"Ты Scrami AI CREATIVE. Ты креативный автор: музыка, тексты, идеи."; "CODE"->"Ты Scrami AI CODE. Ты senior программист. Давай рабочий код."; "STUDY"->"Ты Scrami AI STUDY. Объясняй школьные темы просто и с примерами."; else->"Ты S.AI SMART — личный AI-помощник. Отвечай естественно, точно и полезно. Не повторяй приветствия и имя ассистента без причины. Не выдумывай факты. Если задача сложная — разбей её на понятные действия. Учитывай память и историю диалога. Если пользователь просит готовый текст — дай готовый текст без лишней болтовни."}
     private fun showTools(){
         AlertDialog.Builder(this).setTitle("S.AI")
             .setItems(arrayOf("＋ New chat","💬 History","🔎 Search","🧠 Memory","👤 Account","⚙ Settings","🌐 Web","📁 File","🧮 Calculator","🔊 Read last answer")){_,which->
@@ -290,7 +294,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun loadSaved() {
         val s = prefs.getString("visual", "") ?: ""
         if (s.isBlank()) {
-            addBubble("S.AI готов. Локальная модель работает на устройстве — без API и подписки.", false)
+            addBubble("S.AI готов. Напиши, что нужно сделать — я отвечу без шаблонного приветствия.", false)
         } else {
             s.split("\n---\n").forEach { part ->
                 if (part.startsWith("U:")) addBubble(part.substring(2), true)
@@ -301,7 +305,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun newChat() {
         chat.removeAllViews()
         prefs.edit().remove("visual").remove("history").apply()
-        addBubble("S.AI готов. Локальная модель работает на устройстве — без API и подписки.", false)
+        addBubble("S.AI готов. Напиши, что нужно сделать — я отвечу без шаблонного приветствия.", false)
     }
     private fun saveVisual() {
         val a = mutableListOf<String>()
