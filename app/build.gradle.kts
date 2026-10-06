@@ -9,10 +9,13 @@ android {
         applicationId = "com.scrami.ai"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "3.0"
+        versionCode = 5
+        versionName = "5.0"
     }
-    compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
     kotlinOptions { jvmTarget = "17" }
 }
 dependencies {
