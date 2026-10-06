@@ -5,7 +5,7 @@
         <intent><action android:name="android.speech.RecognitionService" /></intent>
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
     </queries>
-    <application android:usesCleartextTraffic="true" android:allowBackup="true" android:icon="@drawable/scrami_icon" android:label="S.AI 7.0" android:theme="@style/Theme.ScramiAI" android:supportsRtl="true">
+    <application android:usesCleartextTraffic="true" android:allowBackup="true" android:icon="@drawable/scrami_icon" android:label="S.AI 7.1" android:theme="@style/Theme.ScramiAI" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
