@@ -257,7 +257,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         status.setTextColor(Color.rgb(107,220,150))
         lifecycleScope.launch(Dispatchers.IO){
             try{
-                val loaded=Llama.loadModel(file.absolutePath,LlamaConfig(contextSize=2048,threads=maxOf(2,Runtime.getRuntime().availableProcessors()/2)))
+                val loaded=Llama.loadModel(file.absolutePath,LlamaConfig(contextSize=4096,threads=maxOf(2,Runtime.getRuntime().availableProcessors()/2)))
                 model=loaded
             }catch(e:Exception){
                 withContext(Dispatchers.Main){modelLabel.text="Model load error";Toast.makeText(this@MainActivity,e.message?:"Model error",Toast.LENGTH_LONG).show()}
@@ -275,8 +275,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 if(text.lowercase().startsWith("remember ")){val m=prefs.getString("memory","")?:"";prefs.edit().putString("memory",(m+"\n"+text.substring(9).trim()).trim()).apply()}
                 val memory=prefs.getString("memory","")?:""
                 val style=prefs.getString("style","friendly, confident, natural")?: "friendly, confident, natural"
-                val prompt="MEMORY:\n"+memory.takeLast(3000)+"\nSTYLE:\n"+style+"\nCONVERSATION:\n"+history.takeLast(7000)+"\nUSER: "+text+"\nASSISTANT:"
-                val result=Llama.complete(loaded,prompt=prompt,systemPrompt=systemPromptForMode(),maxTokens=if(currentMode=="FAST")220 else 480)
+                val prompt="MEMORY:\n"+memory.takeLast(1600)+"\nSTYLE:\n"+style+"\nCONVERSATION:\n"+history.takeLast(4200)+"\nUSER: "+text+"\nASSISTANT:"
+                val result=Llama.complete(loaded,prompt=prompt,systemPrompt=systemPromptForMode(),maxTokens=if(currentMode=="FAST")260 else 700)
                 val answer=result.text.trim().ifBlank{"Не смог сформировать ответ."}
                 prefs.edit().putString("history",(history+"\nUSER: "+text+"\nASSISTANT: "+answer).takeLast(12000)).apply()
                 withContext(Dispatchers.Main){
@@ -290,7 +290,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun modeName(m:String)=when(m){"FAST"->"⚡ FAST";"SMART"->"🧠 SMART";"CREATIVE"->"🎨 CREATIVE";"CODE"->"💻 CODE";else->"📚 STUDY"}
     private fun buildModeRow(row:LinearLayout){row.removeAllViews();listOf("FAST","SMART","CREATIVE","CODE","STUDY").forEach{m->row.addView(TextView(this).apply{text=modeName(m);textSize=10f;gravity=Gravity.CENTER;setPadding(dp(12),0,dp(12),0);setTextColor(if(m==currentMode)Color.BLACK else Color.WHITE);background=rounded(if(m==currentMode)Color.WHITE else Color.rgb(20,21,26),18f,Color.TRANSPARENT);setOnClickListener{currentMode=m;buildModeRow(row)}},LinearLayout.LayoutParams(dp(105),dp(34)).apply{rightMargin=dp(6)})}}
-    private fun systemPromptForMode()=when(currentMode){"FAST"->"Ты Scrami AI FAST. Отвечай максимально быстро и кратко."; "CREATIVE"->"Ты Scrami AI CREATIVE. Ты креативный автор: музыка, тексты, идеи."; "CODE"->"Ты Scrami AI CODE. Ты senior программист. Давай рабочий код."; "STUDY"->"Ты Scrami AI STUDY. Объясняй школьные темы просто и с примерами."; else->"Ты S.AI SMART — личный AI-помощник. Отвечай естественно, точно и полезно. Не повторяй приветствия и имя ассистента без причины. Не выдумывай факты. Если задача сложная — разбей её на понятные действия. Учитывай память и историю диалога. Если пользователь просит готовый текст — дай готовый текст без лишней болтовни."}
+    private fun systemPromptForMode()="Ты S.AI — универсальный личный AI-помощник. Твоя цель — давать максимально полезный, точный и естественный результат. Сначала пойми задачу и контекст, затем отвечай по существу. Не выдумывай факты, источники, результаты действий или доступ к данным, которых у тебя нет. Если информации недостаточно — прямо скажи, чего не хватает. Для сложных задач рассуждай последовательно внутри себя, но пользователю показывай только полезный итог и краткое объяснение. Для программирования давай рабочий код и учитывай реальные ограничения среды. Для учёбы объясняй понятно. Для текста соблюдай заданный стиль. Помни контекст текущего диалога и пользовательскую память. Не начинай каждый ответ с приветствия. Не называй себя ботом. Не повторяй запрос пользователя без необходимости."
     private fun showTools(){
         AlertDialog.Builder(this).setTitle("S.AI")
             .setItems(arrayOf("＋ New chat","💬 History","🔎 Search","🧠 Memory","👤 Account","⚙ Settings","🌐 Web","📁 File","🧮 Calculator","🔊 Read last answer")){_,which->
