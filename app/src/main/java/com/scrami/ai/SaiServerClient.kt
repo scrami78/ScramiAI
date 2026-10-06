@@ -11,7 +11,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.Base64
 
-data class SaiChatResult(val text: String, val model: String, val device: String)
+data class SaiChatSource(val title: String, val url: String)
+data class SaiChatResult(val text: String, val model: String, val device: String, val sources: List<SaiChatSource> = emptyList())
 data class SaiImageResult(val base64: String, val model: String, val device: String)
 data class SaiSearchItem(val title: String, val url: String, val snippet: String)
 
@@ -38,7 +39,11 @@ object SaiServerClient {
             return SaiChatResult(
                 json.optString("text", ""),
                 json.optString("model", "S.AI Core"),
-                json.optString("device", "local")
+                json.optString("device", "local"),
+                (0 until (json.optJSONArray("sources")?.length() ?: 0)).map { i ->
+                    val s = json.getJSONArray("sources").getJSONObject(i)
+                    SaiChatSource(s.optString("title"), s.optString("url"))
+                }
             )
         }
     }
