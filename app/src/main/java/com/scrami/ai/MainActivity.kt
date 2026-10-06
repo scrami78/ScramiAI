@@ -55,58 +55,119 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun buildUi() {
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.rgb(10,10,11)) }
+        val root = FrameLayout(this).apply { setBackgroundColor(Color.rgb(7,8,11)) }
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(10), dp(14), dp(8))
-            setBackgroundColor(Color.rgb(10,10,11))
         }
-        val header = LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL; setPadding(0,dp(4),0,dp(8)) }
+
+        val header = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(3), 0, dp(10))
+        }
+        val menu = TextView(this).apply {
+            text = "☰"; textSize = 20f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+            background = rounded(Color.rgb(22,23,28), 22f, Color.rgb(48,49,57))
+            setOnClickListener { showTools() }
+        }
+        header.addView(menu, LinearLayout.LayoutParams(dp(44), dp(44)))
+
         val mark = TextView(this).apply {
-            text="S";gravity=Gravity.CENTER;textSize=18f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK)
-            background=rounded(Color.WHITE,16f,Color.rgb(220,220,224))
+            text = "S"; textSize = 19f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.BLACK); background = rounded(Color.WHITE, 15f, Color.TRANSPARENT)
         }
-        header.addView(mark,LinearLayout.LayoutParams(dp(40),dp(40)))
-        val titleBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),0,0,0)}
-        titleBox.addView(TextView(this).apply{text="S.AI";textSize=18f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE)})
-        status=TextView(this).apply{text="PRIVATE • LOCAL • FREE";textSize=9f;setTextColor(Color.rgb(105,105,112));letterSpacing=.08f}
-        titleBox.addView(status)
-        header.addView(titleBox,LinearLayout.LayoutParams(0,-2,1f))
-        header.addView(TextView(this).apply{text="";textSize=1f;gravity=Gravity.CENTER;setTextColor(Color.TRANSPARENT);setOnClickListener{}},LinearLayout.LayoutParams(dp(44),dp(42)))
+        header.addView(mark, LinearLayout.LayoutParams(dp(42), dp(42)).apply { leftMargin = dp(5) })
+
+        val names = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10),0,0,0) }
+        names.addView(TextView(this).apply {
+            text = "S.AI 6.0"; textSize = 18f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE)
+        })
+        status = TextView(this).apply {
+            text = "PRIVATE • LOCAL • FREE"; textSize = 9f; setTextColor(Color.rgb(116,120,132)); letterSpacing = .08f
+        }
+        names.addView(status)
+        header.addView(names, LinearLayout.LayoutParams(0,-2,1f))
+        val avatar = TextView(this).apply {
+            text = "S"; textSize = 15f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE); background = rounded(Color.rgb(39,42,51), 22f, Color.rgb(69,72,84))
+            setOnClickListener { accountDialog() }
+        }
+        header.addView(avatar, LinearLayout.LayoutParams(dp(44), dp(44)))
         main.addView(header)
 
-        val scroll=ScrollView(this).apply{isFillViewport=true;setPadding(0,dp(4),0,dp(4))}
-        chat=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(0,dp(8),0,dp(8))}
-        scroll.addView(chat);main.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
+        val modelBar = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            background = rounded(Color.rgb(15,17,22), 18f, Color.rgb(37,40,48))
+            setPadding(dp(12),0,dp(8),0)
+        }
+        modelBar.addView(TextView(this).apply {
+            text = "🧠  S.AI Smart"; textSize = 12f; setTextColor(Color.rgb(224,226,233))
+        }, LinearLayout.LayoutParams(0,dp(40),1f))
+        modelBar.addView(TextView(this).apply {
+            text = "LOCAL"; textSize = 9f; gravity = Gravity.CENTER; setTextColor(Color.rgb(108,224,153))
+            background = rounded(Color.rgb(20,49,34), 12f, Color.TRANSPARENT); setPadding(dp(9),dp(5),dp(9),dp(5))
+        })
+        main.addView(modelBar)
 
-        val composer=LinearLayout(this).apply{gravity=Gravity.BOTTOM;setPadding(0,dp(4),0,dp(2))}
-        val plus=TextView(this).apply{
-            text="＋";textSize=27f;gravity=Gravity.CENTER;setTextColor(Color.BLACK)
-            background=rounded(Color.rgb(25,26,30),28f,Color.rgb(55,56,62));setTextColor(Color.WHITE);setOnClickListener{showAttachMenu()}
+        val scroll = ScrollView(this).apply { isFillViewport = true; overScrollMode = View.OVER_SCROLL_NEVER }
+        chat = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0,dp(10),0,dp(14)) }
+        scroll.addView(chat)
+        main.addView(scroll, LinearLayout.LayoutParams(-1,0,1f))
+
+        val quick = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0,0,0,dp(6)) }
+        val quickItems = arrayOf("✦ Create","▣ Analyze","⌕ Search","⚙ Tools")
+        quickItems.forEachIndexed { i, label ->
+            quick.addView(TextView(this).apply {
+                text = label; textSize = 10f; gravity = Gravity.CENTER; setTextColor(Color.rgb(220,222,230))
+                background = rounded(Color.rgb(20,22,28), 17f, Color.rgb(43,46,55))
+                setPadding(dp(9),0,dp(9),0)
+                setOnClickListener { when(i){0->imageLab();1->pickFile();2->openWeb();else->showTools()} }
+            }, LinearLayout.LayoutParams(0,dp(34),1f).apply { rightMargin = dp(5) })
         }
-        composer.addView(plus,LinearLayout.LayoutParams(dp(54),dp(56)))
-        input=EditText(this).apply{
-            hint="Message S.AI";setHintTextColor(Color.rgb(145,145,150));setTextColor(Color.WHITE);textSize=16f
-            setPadding(dp(15),dp(10),dp(12),dp(10));background=rounded(Color.rgb(247,247,249),25f,Color.rgb(225,225,229));maxLines=5
+        main.addView(quick)
+
+        val composer = LinearLayout(this).apply { gravity = Gravity.BOTTOM }
+        val plus = TextView(this).apply {
+            text = "+"; textSize = 25f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+            background = rounded(Color.rgb(20,22,28), 27f, Color.rgb(48,51,60))
+            setOnClickListener { showAttachMenu() }
         }
-        composer.addView(input,LinearLayout.LayoutParams(0,dp(56),1f).apply{leftMargin=dp(7)})
-        val mic=TextView(this).apply{
-            text="🎙";textSize=18f;gravity=Gravity.CENTER;setTextColor(Color.BLACK);background=rounded(Color.rgb(247,247,249),28f,Color.rgb(225,225,229));setOnClickListener{startVoice()}
-            setOnLongClickListener{startVoice();true}
+        composer.addView(plus, LinearLayout.LayoutParams(dp(50),dp(58)))
+        input = EditText(this).apply {
+            hint = "Message S.AI…"; setHintTextColor(Color.rgb(122,126,138)); setTextColor(Color.WHITE)
+            textSize = 16f; maxLines = 6; setPadding(dp(15),dp(10),dp(12),dp(10))
+            background = rounded(Color.rgb(23,25,31), 25f, Color.rgb(49,52,62))
         }
-        composer.addView(mic,LinearLayout.LayoutParams(dp(52),dp(56)).apply{leftMargin=dp(6)})
-        send=TextView(this).apply{text="↑";gravity=Gravity.CENTER;textSize=23f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);background=rounded(Color.BLACK,28f,Color.TRANSPARENT);setOnClickListener{sendMessage()}}
-        composer.addView(send,LinearLayout.LayoutParams(dp(56),dp(56)).apply{leftMargin=dp(6)})
+        composer.addView(input, LinearLayout.LayoutParams(0,dp(58),1f).apply { leftMargin = dp(6) })
+        val mic = TextView(this).apply {
+            text = "🎙"; textSize = 18f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+            background = rounded(Color.rgb(23,25,31), 27f, Color.rgb(49,52,62))
+            setOnClickListener { startVoice() }
+        }
+        composer.addView(mic, LinearLayout.LayoutParams(dp(50),dp(58)).apply { leftMargin = dp(6) })
+        send = TextView(this).apply {
+            text = "↑"; textSize = 23f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; setTextColor(Color.BLACK)
+            background = rounded(Color.WHITE, 28f, Color.TRANSPARENT); setOnClickListener { sendMessage() }
+        }
+        composer.addView(send, LinearLayout.LayoutParams(dp(56),dp(58)).apply { leftMargin = dp(6) })
         main.addView(composer)
 
-        modelLabel=TextView(this).apply{text="Preparing S.AI…";textSize=10f;setTextColor(Color.rgb(120,120,125));gravity=Gravity.CENTER}
-        progress=ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal).apply{max=100}
-        val modelBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;addView(modelLabel);addView(progress,LinearLayout.LayoutParams(-1,dp(3)))}
-        main.addView(modelBox,LinearLayout.LayoutParams(-1,dp(30)))
+        val footer = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(3),dp(4),dp(3),0) }
+        val footerText = TextView(this).apply {
+            text = "S.AI 6.0  •  Local-first  •  Your chats stay on device"
+            textSize = 9f; setTextColor(Color.rgb(91,95,105))
+        }
+        footer.addView(footerText, LinearLayout.LayoutParams(0,-2,1f))
+        val memory = TextView(this).apply {
+            text = "◉"; textSize = 14f; gravity = Gravity.CENTER; setTextColor(Color.rgb(125,130,142))
+            setOnClickListener { showMemory() }
+        }
+        footer.addView(memory, LinearLayout.LayoutParams(dp(30),dp(24)))
+        main.addView(footer)
 
-        root.addView(main,FrameLayout.LayoutParams(-1,-1))
-        val side=buildSidebar()
-        root.addView(side,FrameLayout.LayoutParams(dp(310),-1).apply{gravity=Gravity.START;leftMargin=-dp(310)})
+        root.addView(main, FrameLayout.LayoutParams(-1,-1))
+        val side = buildSidebar()
+        root.addView(side, FrameLayout.LayoutParams(dp(310),-1).apply { gravity = Gravity.START; leftMargin = -dp(310) })
         installSwipe(root,side)
         setContentView(root)
     }
