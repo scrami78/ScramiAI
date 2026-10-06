@@ -46,6 +46,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var currentMode = "SMART"
     private var tts: TextToSpeech? = null
     private var recognizer: SpeechRecognizer? = null
+    private var pendingMessage: String? = null
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
@@ -101,9 +102,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             background = rounded(Color.rgb(15,17,22), 18f, Color.rgb(37,40,48))
             setPadding(dp(12),0,dp(8),0)
         }
-        modelBar.addView(TextView(this).apply {
+        modelLabel = TextView(this).apply {
             text = "🧠  S.AI Smart"; textSize = 12f; setTextColor(Color.rgb(224,226,233))
-        }, LinearLayout.LayoutParams(0,dp(40),1f))
+        }
+        modelBar.addView(modelLabel, LinearLayout.LayoutParams(0,dp(40),1f))
         modelBar.addView(TextView(this).apply {
             text = "LOCAL"; textSize = 9f; gravity = Gravity.CENTER; setTextColor(Color.rgb(108,224,153))
             background = rounded(Color.rgb(20,49,34), 12f, Color.TRANSPARENT); setPadding(dp(9),dp(5),dp(9),dp(5))
@@ -116,13 +118,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         main.addView(scroll, LinearLayout.LayoutParams(-1,0,1f))
 
         val quick = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0,0,0,dp(6)) }
-        val quickItems = arrayOf("✦ Create","▣ Analyze","⌕ Search","⚙ Tools")
+        val quickItems = arrayOf("✦ Create","📷 Camera","▣ Analyze","⌕ Search")
         quickItems.forEachIndexed { i, label ->
             quick.addView(TextView(this).apply {
                 text = label; textSize = 10f; gravity = Gravity.CENTER; setTextColor(Color.rgb(220,222,230))
                 background = rounded(Color.rgb(20,22,28), 17f, Color.rgb(43,46,55))
                 setPadding(dp(9),0,dp(9),0)
-                setOnClickListener { when(i){0->imageLab();1->pickFile();2->openWeb();else->showTools()} }
+                setOnClickListener { when(i){0->imageLab();1->capturePhoto();2->pickFile();else->openWeb()} }
             }, LinearLayout.LayoutParams(0,dp(34),1f).apply { rightMargin = dp(5) })
         }
         main.addView(quick)
@@ -227,8 +229,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun showAttachMenu(){PopupMenu(this,send).apply{menu.add("📷 Photo");menu.add("📁 File");menu.add("🎨 Image generation");menu.add("✏️ Edit image");menu.add("📎 Document");setOnMenuItemClickListener{when(it.title.toString()){"📷 Photo"->pickImage(); "📁 File"->pickFile(); "🎨 Image generation"->imageLab(); "✏️ Edit image"->imageLab(); "📎 Document"->pickFile()};true};show()}}
+    private fun showAttachMenu(){PopupMenu(this,send).apply{menu.add("📷 Camera");menu.add("🖼 Photo from gallery");menu.add("📁 File");menu.add("🎨 Image generation");menu.add("✏️ Edit image");menu.add("📎 Document");setOnMenuItemClickListener{when(it.title.toString()){"📷 Camera"->capturePhoto(); "🖼 Photo from gallery"->pickImage(); "📁 File"->pickFile(); "🎨 Image generation"->imageLab(); "✏️ Edit image"->imageLab(); "📎 Document"->pickFile()};true};show()}}
     private fun pickImage(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="image/*";addCategory(Intent.CATEGORY_OPENABLE)},45)}
+    private fun capturePhoto(){
+        val intent=Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
+        if(intent.resolveActivity(packageManager)==null){Toast.makeText(this,"Камера недоступна на устройстве.",Toast.LENGTH_SHORT).show();return}
+        startActivityForResult(intent,46)
+    }
     private fun showMemory(){val m=prefs.getString("memory","")?:"";AlertDialog.Builder(this).setTitle("Scrami Memory").setMessage(if(m.isBlank())"Memory is empty. Say: “remember that …”" else m).setPositiveButton("Add"){_,_->val e=EditText(this);e.hint="What should Scrami remember?";AlertDialog.Builder(this).setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("memory",(m+"\n"+e.text.toString()).trim()).apply()}.setNegativeButton("Cancel",null).show()}.setNegativeButton("Clear"){_,_->prefs.edit().remove("memory").apply()}.show()}
     private fun accountDialog(){val current=prefs.getString("account","Scrami User")?:"Scrami User";val e=EditText(this);e.setText(current);e.hint="Account name";AlertDialog.Builder(this).setTitle("Scrami Account").setMessage("Local account on this device. Cloud sign-in can be connected later.").setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("account",e.text.toString().ifBlank{"Scrami User"}).apply();Toast.makeText(this,"Account saved",Toast.LENGTH_SHORT).show()}.setNegativeButton("Cancel",null).show()}
     private fun settingsDialog(){
@@ -262,7 +269,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun splash() {
         val overlay=FrameLayout(this).apply{setBackgroundColor(Color.rgb(8,9,13))}
         val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER}
-        box.addView(TextView(this).apply{text="S";gravity=Gravity.CENTER;textSize=48f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);background=grad(intArrayOf(Color.rgb(172,91,255),Color.rgb(75,45,154)),32f)},LinearLayout.LayoutParams(dp(96),dp(96)))
+        box.addView(TextView(this).apply{text="S.AI";gravity=Gravity.CENTER;textSize=30f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);background=rounded(Color.BLACK,32f,Color.rgb(48,48,54));letterSpacing=.08f},LinearLayout.LayoutParams(dp(96),dp(96)))
         box.addView(TextView(this).apply{text="S.AI";textSize=28f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);gravity=Gravity.CENTER;setPadding(0,dp(18),0,dp(4));letterSpacing=.12f})
         box.addView(TextView(this).apply{text="YOUR AI. YOUR DEVICE.";textSize=11f;setTextColor(Color.rgb(145,139,160));gravity=Gravity.CENTER;letterSpacing=.14f})
         overlay.addView(box,FrameLayout.LayoutParams(-1,-1))
@@ -270,7 +277,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         overlay.alpha=0f
         overlay.animate().alpha(1f).setDuration(250).withEndAction{
             overlay.animate().alpha(0f).setDuration(450).setStartDelay(450).withEndAction{
-                (overlay.parent as? android.view.ViewGroup)?.removeView(overlay);ensureModel()
+                (overlay.parent as? android.view.ViewGroup)?.removeView(overlay)
             }.start()
         }.start()
     }
@@ -294,7 +301,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                             done += n
                             if (total > 0) withContext(Dispatchers.Main) {
                                 val pct = ((done * 100L) / total).toInt().coerceIn(0, 100)
-                                progress.progress = pct
                                 modelLabel.text = "INSTALLING BUNDLED MODEL • " + pct + "%"
                             }
                         }
@@ -329,7 +335,15 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun sendMessage(){
         val text=input.text.toString().trim();if(text.isEmpty())return
-        val loaded=model?:run{Toast.makeText(this,"Модель ещё загружается.",Toast.LENGTH_SHORT).show();return}
+        val loaded=model
+        if(loaded==null){
+            pendingMessage=text
+            input.setText("")
+            status.text="● LOADING LOCAL MODEL"
+            modelLabel.text="LOADING QWEN 0.5B • PLEASE WAIT"
+            ensureModel()
+            return
+        }
         input.setText("");addBubble(text,true);val answerView=addBubble("Думаю…",false);send.isEnabled=false;status.text="● THINKING LOCALLY"
         lifecycleScope.launch(Dispatchers.IO){
             try{
@@ -411,6 +425,34 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun grad(c:IntArray,r:Float)=GradientDrawable(GradientDrawable.Orientation.TL_BR,c).apply{cornerRadius=dp(r).toFloat()}
     private fun dp(v:Int)= (v*resources.displayMetrics.density).roundToInt()
     private fun dp(v:Float)= (v*resources.displayMetrics.density).roundToInt()
-    override fun onActivityResult(req:Int,res:Int,data:Intent?){super.onActivityResult(req,res,data);if(res==RESULT_OK&&data?.data!=null){if(req==45){input.setText("IMAGE ATTACHED. Describe the exact edit or analysis you want.");input.setSelection(input.text.length)}else{lifecycleScope.launch(Dispatchers.IO){val t=try{contentResolver.openInputStream(data.data!!)?.bufferedReader()?.use{it.readText().take(10000)}?:""}catch(_:Exception){""};withContext(Dispatchers.Main){input.setText(if(t.isBlank())"Attachment selected. Ask Scrami what to do with it." else "Analyze this document:\n"+t);input.setSelection(input.text.length)}}}}}
+    override fun onActivityResult(req:Int,res:Int,data:Intent?){
+        super.onActivityResult(req,res,data)
+        if(res!=RESULT_OK)return
+        if(req==46){
+            val bitmap=data?.extras?.get("data") as? android.graphics.Bitmap
+            if(bitmap!=null){
+                val file=File(cacheDir,"photo_${System.currentTimeMillis()}.jpg")
+                try{FileOutputStream(file).use{bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG,92,it)}}catch(_:Exception){}
+            }
+            input.setText("PHOTO CAPTURED. Describe what S.AI should do with this photo.")
+            input.setSelection(input.text.length)
+            Toast.makeText(this,"Фото сделано и готово к отправке.",Toast.LENGTH_SHORT).show()
+            return
+        }
+        if(data?.data!=null){
+            if(req==45){
+                input.setText("IMAGE ATTACHED. Describe the exact edit or analysis you want.")
+                input.setSelection(input.text.length)
+            }else{
+                lifecycleScope.launch(Dispatchers.IO){
+                    val t=try{contentResolver.openInputStream(data.data!!)?.bufferedReader()?.use{it.readText().take(10000)}?:""}catch(_:Exception){"")
+                    withContext(Dispatchers.Main){
+                        input.setText(if(t.isBlank())"Attachment selected. Ask Scrami what to do with it." else "Analyze this document:\n"+t)
+                        input.setSelection(input.text.length)
+                    }
+                }
+            }
+        }
+    }
     override fun onDestroy(){recognizer?.destroy();tts?.shutdown();super.onDestroy();val m=model;if(m!=null)lifecycleScope.launch(Dispatchers.IO){try{Llama.releaseModel(m)}catch(_:Exception){}}}
 }
