@@ -82,10 +82,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         val names = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10),0,0,0) }
         names.addView(TextView(this).apply {
-            text = "S.AI 7.1"; textSize = 18f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE)
+            text = "S.AI 1.01"; textSize = 18f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE)
         })
         status = TextView(this).apply {
-            text = "PRIVATE • LOCAL • FREE"; textSize = 9f; setTextColor(Color.rgb(116,120,132)); letterSpacing = .08f
+            text = "ONLINE AI • S.AI"; textSize = 9f; setTextColor(Color.rgb(116,120,132)); letterSpacing = .08f
         }
         names.addView(status)
         header.addView(names, LinearLayout.LayoutParams(0,-2,1f))
@@ -165,7 +165,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         val footer = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(3),dp(4),dp(3),0) }
         val footerText = TextView(this).apply {
-            text = "S.AI 7.1  •  Local-first  •  Your chats stay on device"
+            text = "S.AI 1.01  •  Онлайн-помощник"
             textSize = 9f; setTextColor(Color.rgb(91,95,105))
         }
         footer.addView(footerText, LinearLayout.LayoutParams(0,-2,1f))
@@ -237,7 +237,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun showAttachMenu(){PopupMenu(this,send).apply{menu.add("📷 Camera");menu.add("🖼 Photo from gallery");menu.add("📁 File");menu.add("🎨 Image generation");menu.add("✏️ Edit image");menu.add("📎 Document");setOnMenuItemClickListener{when(it.title.toString()){"📷 Camera"->capturePhoto(); "🖼 Photo from gallery"->pickImage(); "📁 File"->pickFile(); "🎨 Image generation"->imageLab(); "✏️ Edit image"->imageLab(); "📎 Document"->pickFile()};true};show()}}
+    private fun showAttachMenu(){PopupMenu(this,send).apply{menu.add("Камера");menu.add("Фото");menu.add("Файлы");setOnMenuItemClickListener{when(it.title.toString()){"Камера"->capturePhoto(); "Фото"->pickImage(); "Файлы"->pickFile()};true};show()}}
     private fun pickImage(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="image/*";addCategory(Intent.CATEGORY_OPENABLE)},45)}
     private fun capturePhoto(){
         val intent=Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
@@ -314,7 +314,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER}
         box.addView(TextView(this).apply{text="S.AI";gravity=Gravity.CENTER;textSize=30f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);background=rounded(Color.BLACK,32f,Color.rgb(48,48,54));letterSpacing=.08f},LinearLayout.LayoutParams(dp(96),dp(96)))
         box.addView(TextView(this).apply{text="S.AI";textSize=28f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);gravity=Gravity.CENTER;setPadding(0,dp(18),0,dp(4));letterSpacing=.12f})
-        box.addView(TextView(this).apply{text="YOUR AI. YOUR DEVICE.";textSize=11f;setTextColor(Color.rgb(145,139,160));gravity=Gravity.CENTER;letterSpacing=.14f})
+        box.addView(TextView(this).apply{text="ТВОЙ ИИ-ПОМОЩНИК";textSize=11f;setTextColor(Color.rgb(145,139,160));gravity=Gravity.CENTER;letterSpacing=.14f})
         overlay.addView(box,FrameLayout.LayoutParams(-1,-1))
         addContentView(overlay,FrameLayout.LayoutParams(-1,-1))
         overlay.alpha=0f
