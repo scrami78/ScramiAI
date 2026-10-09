@@ -90,9 +90,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         names.addView(status)
         header.addView(names, LinearLayout.LayoutParams(0,-2,1f))
         val avatar = TextView(this).apply {
-            text = "SA"; textSize = 12f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
+            text = "＋"; textSize = 25f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT
             setTextColor(Color.WHITE); background = rounded(Color.rgb(39,42,51), 22f, Color.rgb(69,72,84))
-            setOnClickListener { accountDialog() }
+            contentDescription = "New chat"
+            setOnClickListener { newChat() }
         }
         header.addView(avatar, LinearLayout.LayoutParams(dp(44), dp(44)))
         main.addView(header)
@@ -107,7 +108,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         modelBar.addView(modelLabel, LinearLayout.LayoutParams(0,dp(40),1f))
         modelBar.addView(TextView(this).apply {
-            text = "LOCAL"; textSize = 9f; gravity = Gravity.CENTER; setTextColor(Color.rgb(108,224,153))
+            text = "AI"; textSize = 9f; gravity = Gravity.CENTER; setTextColor(Color.rgb(220,222,230))
             background = rounded(Color.rgb(20,49,34), 12f, Color.TRANSPARENT); setPadding(dp(9),dp(5),dp(9),dp(5))
         })
         main.addView(modelBar)
@@ -117,19 +118,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         scroll.addView(chat)
         main.addView(scroll, LinearLayout.LayoutParams(-1,0,1f))
 
-        val quick = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0,0,0,dp(6)) }
-        val quickItems = arrayOf("✦ Create","📷 Camera","▣ Analyze","⌕ Search")
-        quickItems.forEachIndexed { i, label ->
-            quick.addView(TextView(this).apply {
-                text = label; textSize = 10f; gravity = Gravity.CENTER; setTextColor(Color.rgb(220,222,230))
-                background = rounded(Color.rgb(20,22,28), 17f, Color.rgb(43,46,55))
-                setPadding(dp(9),0,dp(9),0)
-                setOnClickListener { when(i){0->imageLab();1->capturePhoto();2->pickFile();else->openWeb()} }
-            }, LinearLayout.LayoutParams(0,dp(34),1f).apply { rightMargin = dp(5) })
-        }
-        main.addView(quick)
-
-        val composer = LinearLayout(this).apply {
+                val composer = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(6), dp(6), dp(6), dp(6))
             background = rounded(Color.rgb(22,24,30), 30f, Color.rgb(52,55,65))
@@ -268,11 +257,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun aboutDialog(){
-        AlertDialog.Builder(this).setTitle("About S.AI").setMessage("S.AI 7.1 — private AI assistant. Local-first, minimalist, and designed around your chats. The bundled 0.5B model works offline; stronger cloud models can be connected later without changing the interface.").setPositiveButton("OK",null).show()
+        AlertDialog.Builder(this).setTitle("About S.AI").setMessage("S.AI 1.01 — онлайн ИИ-помощник. Для облачного ИИ нужен доступный S.AI Core и ключ провайдера; офлайн-модель может работать локально.").setPositiveButton("OK",null).show()
     }
     private fun securityDialog(){
         AlertDialog.Builder(this).setTitle("Privacy & security")
-            .setMessage("S.AI 7.1 runs the language model locally. Chat history, profile name and memory stay in the app's private storage. Android controls installation and device security; S.AI does not bypass system security.")
+            .setMessage("История чатов и память хранятся в приложении. Если настроен облачный S.AI Core, текст запроса отправляется на этот сервер для обработки. Используй только доверенный HTTPS-сервер.")
             .setPositiveButton("OK",null).show()
     }
     private fun languageDialog(){
