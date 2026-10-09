@@ -121,6 +121,65 @@ def web_search(query: str, limit: int = 5) -> list[SearchItem]:
         return []
 
 
+def cloud_chat(req: ChatRequest, sources: list[SearchItem], language: str) -> ChatResponse | None:
+    """Use an optional OpenAI-compatible cloud endpoint when configured; otherwise use local inference."""
+    api_base = os.getenv("SAI_API_BASE", "").strip().rstrip("/")
+    api_key = os.getenv("SAI_API_KEY", "").strip()
+    if not api_base or not api_key:
+        return None
+
+    model_name = os.getenv(
+        "SAI_CLOUD_MODEL",
+        os.getenv("SAI_FAST_MODEL", "openai/gpt-oss-20b:free") if req.mode.upper() == "FAST"
+        else os.getenv("SAI_CODE_MODEL", "openai/gpt-oss-20b:free") if req.mode.upper() == "CODE"
+        else os.getenv("SAI_SMART_MODEL", "openai/gpt-oss-20b:free"),
+    )
+    source_text = "\\n".join(
+        f"[{i+1}] {s.title} — {s.url}\\n{s.snippet}" for i, s in enumerate(sources)
+    )
+    system = (
+        "You are S.AI, a helpful general-purpose assistant. Be accurate and natural. "
+        f"Answer only in {language}, matching the user's language. Never switch languages without being asked. "
+        "Never invent facts, sources, or tool results. If web sources are supplied, cite them as [1], [2], etc. "
+        f"Mode: {req.mode}. Memory: {req.memory[-6000:]}\\n"
+        f"Web sources:\\n{source_text}"
+    )
+    messages = [{"role": "system", "content": system}]
+    if req.history.strip():
+        messages.append({"role": "user", "content": "Earlier conversation context (use as context, do not answer it again):\\n" + req.history[-12000:]})
+    messages.append({"role": "user", "content": req.message})
+    payload = json.dumps({
+        "model": model_name,
+        "messages": messages,
+        "max_tokens": req.max_tokens,
+        "temperature": 0.7,
+    }).encode("utf-8")
+    request = urllib.request.Request(
+        api_base + "/chat/completions",
+        data=payload,
+        headers={
+            "Authorization": "Bearer " + api_key,
+            "Content-Type": "application/json",
+            "User-Agent": "SAI-Core/1.01",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=90) as response:
+            data = json.loads(response.read().decode("utf-8"))
+        answer = data["choices"][0]["message"]["content"]
+        if isinstance(answer, list):
+            answer = "".join(str(part.get("text", "")) for part in answer if isinstance(part, dict))
+        answer = str(answer).strip()
+        if not answer:
+            raise ValueError("Cloud provider returned an empty answer")
+        return ChatResponse(text=answer, model=str(data.get("model", model_name)), device="cloud", language=language, sources=sources)
+    except Exception as exc:
+        # Do not silently fall back to a local model after a configured cloud provider fails:
+        # make the configuration/network error visible instead of unexpectedly loading gigabytes.
+        raise HTTPException(status_code=502, detail="Cloud AI request failed: " + str(exc)[:300]) from exc
+
+
 def needs_web(text: str) -> bool:
     t = text.lower()
     triggers = ("сегодня", "сейчас", "последн", "новост", "цена", "курс", "погода", "найди", "поищи",
@@ -174,6 +233,9 @@ def chat(req: ChatRequest):
     tokenizer, model = chat_pipeline(selected_model)
     language = detect_language(req.message)
     sources = web_search(req.message) if req.use_web and needs_web(req.message) else []
+    cloud_result = cloud_chat(req, sources, language)
+    if cloud_result is not None:
+        return cloud_result
     source_text = "\n".join(f"[{i+1}] {s.title} — {s.url}\n{s.snippet}" for i, s in enumerate(sources))
     language_rule = (
         f"Answer ONLY in {language}, matching the user's wording and script. "
