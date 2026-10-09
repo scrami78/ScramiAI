@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check Python backend syntax
+        run: python -m py_compile server/cloud/main.py server/ai/main.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
