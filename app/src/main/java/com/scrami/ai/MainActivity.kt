@@ -248,19 +248,19 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun accountDialog(){val current=prefs.getString("account","Scrami User")?:"Scrami User";val e=EditText(this);e.setText(current);e.hint="Account name";AlertDialog.Builder(this).setTitle("S.AI Account").setMessage("Local account on this device. Cloud sign-in can be connected later.").setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("account",e.text.toString().ifBlank{"Scrami User"}).apply();Toast.makeText(this,"Account saved",Toast.LENGTH_SHORT).show()}.setNegativeButton("Cancel",null).show()}
     private fun settingsDialog(){
         val e=EditText(this).apply{
-            hint="http://192.168.1.10:8787"
+            hint="https://your-sai-core.example"
             setText(serverUrl())
             setSingleLine(true)
         }
         AlertDialog.Builder(this)
             .setTitle("S.AI Core")
-            .setMessage("Укажи адрес локального S.AI Core на ПК. Пусто = полностью офлайн Qwen 0.5B.")
+            .setMessage("Укажи HTTPS-адрес облачного S.AI Core. Пусто = офлайн-модель на телефоне; облачный ИИ требует доступного сервера и ключа провайдера.")
             .setView(e)
             .setPositiveButton("Save"){_,_->
                 prefs.edit().putString("server_url",e.text.toString().trim().removeSuffix("/")).apply()
                 val configured=serverUrl().isNotBlank()
-                modelLabel.text=if(configured)"S.AI CORE • LOCAL PC" else "LOCAL MODEL • QWEN 0.5B • OFFLINE"
-                status.text=if(configured)"● CORE READY • PRIVATE • FREE" else "● READY • OFFLINE • FREE"
+                modelLabel.text=if(configured)"S.AI CORE • CLOUD" else "LOCAL MODEL • QWEN 0.5B • OFFLINE"
+                status.text=if(configured)"● CORE URL SAVED" else "● READY • OFFLINE"
                 Toast.makeText(this,if(configured)"S.AI Core подключён" else "Офлайн-режим включён",Toast.LENGTH_SHORT).show()
             }
             .setNeutralButton("Privacy"){_,_->securityDialog()}
