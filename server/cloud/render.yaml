@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: sai-cloud-core
+    runtime: docker
+    plan: free
+    dockerfilePath: ./server/cloud/Dockerfile
+    dockerContext: ./server/cloud
+    healthCheckPath: /health
+    envVars:
+      - key: SAI_API_BASE
+        value: https://openrouter.ai/api/v1
+      - key: SAI_API_KEY
+        sync: false
+      - key: SAI_CLOUD_MODEL
+        value: openai/gpt-oss-20b:free
