@@ -68,34 +68,27 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             setPadding(0, dp(3), 0, dp(10))
         }
         val menu = TextView(this).apply {
-            text = "☰"; textSize = 20f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
-            background = rounded(Color.rgb(22,23,28), 22f, Color.rgb(48,49,57))
-            setOnClickListener { showTools() }
+            text = "☰"; textSize = 25f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+            background = rounded(Color.TRANSPARENT, 22f, Color.TRANSPARENT)
+            contentDescription = "История чатов"
+            setOnClickListener { showHistoryPanel() }
         }
-        header.addView(menu, LinearLayout.LayoutParams(dp(44), dp(44)))
-
+        header.addView(menu, LinearLayout.LayoutParams(dp(48), dp(48)))
         val mark = TextView(this).apply {
-            text = "S.AI"; textSize = 13f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.BLACK); background = rounded(Color.WHITE, 15f, Color.TRANSPARENT)
+            text = "S.AI"; textSize = 25f; gravity = Gravity.CENTER; typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            setTextColor(Color.WHITE); letterSpacing = .04f
         }
-        header.addView(mark, LinearLayout.LayoutParams(dp(42), dp(42)).apply { leftMargin = dp(5) })
-
-        val names = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10),0,0,0) }
-        names.addView(TextView(this).apply {
-            text = "S.AI 1.01"; textSize = 18f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE)
-        })
+        header.addView(mark, LinearLayout.LayoutParams(0, dp(48), 1f))
         status = TextView(this).apply {
-            text = "ONLINE AI • S.AI"; textSize = 9f; setTextColor(Color.rgb(116,120,132)); letterSpacing = .08f
+            text = ""; visibility = View.GONE; textSize = 9f; setTextColor(Color.rgb(116,120,132))
         }
-        names.addView(status)
-        header.addView(names, LinearLayout.LayoutParams(0,-2,1f))
         val avatar = TextView(this).apply {
-            text = "＋"; textSize = 25f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT
-            setTextColor(Color.WHITE); background = rounded(Color.rgb(39,42,51), 22f, Color.rgb(69,72,84))
-            contentDescription = "New chat"
+            text = "☏+"; textSize = 23f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT
+            setTextColor(Color.WHITE); background = rounded(Color.rgb(30,30,34), 24f, Color.TRANSPARENT)
+            contentDescription = "Новый чат"
             setOnClickListener { newChat() }
         }
-        header.addView(avatar, LinearLayout.LayoutParams(dp(44), dp(44)))
+        header.addView(avatar, LinearLayout.LayoutParams(dp(48), dp(48)))
         main.addView(header)
 
         val modelBar = LinearLayout(this).apply {
@@ -111,6 +104,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             text = "AI"; textSize = 9f; gravity = Gravity.CENTER; setTextColor(Color.rgb(220,222,230))
             background = rounded(Color.rgb(20,49,34), 12f, Color.TRANSPARENT); setPadding(dp(9),dp(5),dp(9),dp(5))
         })
+        // Keep internal model status available, but hide the technical model strip from the clean chat UI.
+        modelBar.visibility = View.GONE
         main.addView(modelBar)
 
         val scroll = ScrollView(this).apply { isFillViewport = true; overScrollMode = View.OVER_SCROLL_NEVER }
@@ -129,21 +124,17 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         composer.addView(plus, LinearLayout.LayoutParams(dp(42),dp(48)))
         input = EditText(this).apply {
-            hint = "MESSAGE S.AI"; setHintTextColor(Color.rgb(120,124,136)); setTextColor(Color.WHITE)
+            hint = "Напиши сообщение..."; setHintTextColor(Color.rgb(165,165,170)); setTextColor(Color.WHITE)
             textSize = 16f; maxLines = 5; minLines = 1; gravity = Gravity.CENTER_VERTICAL
             setSingleLine(false); includeFontPadding = false; setPadding(dp(8),0,dp(8),0); background = null
         }
         composer.addView(input, LinearLayout.LayoutParams(0,dp(48),1f))
-        val camera = TextView(this).apply {
-            text = "⌾"; textSize = 22f; gravity = Gravity.CENTER; setTextColor(Color.rgb(224,226,233))
-            setOnClickListener { capturePhoto() }
-        }
-        composer.addView(camera, LinearLayout.LayoutParams(dp(42),dp(48)))
         val mic = TextView(this).apply {
-            text = "●"; textSize = 13f; gravity = Gravity.CENTER; setTextColor(Color.rgb(224,226,233))
+            text = "♩"; textSize = 23f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+            contentDescription = "Голосовой ввод"
             setOnClickListener { startVoice() }
         }
-        composer.addView(mic, LinearLayout.LayoutParams(dp(38),dp(48)))
+        composer.addView(mic, LinearLayout.LayoutParams(dp(42),dp(48)))
         send = TextView(this).apply {
             text = "↑"; textSize = 22f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
             setTextColor(Color.BLACK); background = rounded(Color.WHITE, 23f, Color.TRANSPARENT)
@@ -152,18 +143,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         composer.addView(send, LinearLayout.LayoutParams(dp(46),dp(46)).apply { leftMargin = dp(2) })
         main.addView(composer)
 
-        val footer = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(dp(3),dp(4),dp(3),0) }
-        val footerText = TextView(this).apply {
-            text = "S.AI 1.01  •  Онлайн-помощник"
-            textSize = 9f; setTextColor(Color.rgb(91,95,105))
-        }
-        footer.addView(footerText, LinearLayout.LayoutParams(0,-2,1f))
-        val memory = TextView(this).apply {
-            text = "◉"; textSize = 14f; gravity = Gravity.CENTER; setTextColor(Color.rgb(125,130,142))
-            setOnClickListener { showMemory() }
-        }
-        footer.addView(memory, LinearLayout.LayoutParams(dp(30),dp(24)))
-        main.addView(footer)
+        // Clean chat layout: remove technical footer clutter.
 
         root.addView(main, FrameLayout.LayoutParams(-1,-1))
         val side = buildSidebar()
@@ -226,7 +206,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun showAttachMenu(){PopupMenu(this,send).apply{menu.add("Камера");menu.add("Фото");menu.add("Файлы");setOnMenuItemClickListener{when(it.title.toString()){"Камера"->capturePhoto(); "Фото"->pickImage(); "Файлы"->pickFile()};true};show()}}
+    private fun showAttachMenu(){AlertDialog.Builder(this).setItems(arrayOf("📷  Камера","▧  Фото","▤  Файлы")){_,which->when(which){0->capturePhoto();1->pickImage();2->pickFile()}}.show()}
     private fun pickImage(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="image/*";addCategory(Intent.CATEGORY_OPENABLE)},45)}
     private fun capturePhoto(){
         val intent=Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
@@ -422,7 +402,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 when(which){0->newChat();1->showHistory();2->searchHistory();3->showMemory();4->accountDialog();5->settingsDialog();6->openWeb();7->pickFile();8->calculator();9->speakLast()}
             }.setNegativeButton("Close",null).show()
     }
-    private fun showHistory(){AlertDialog.Builder(this).setTitle("Chat history").setMessage((prefs.getString("history","")?:"").takeLast(5000).ifBlank{"No saved messages yet."}).setPositiveButton("OK",null).show()}
+    private fun showHistory(){AlertDialog.Builder(this).setTitle("История").setMessage((prefs.getString("history","")?:"").takeLast(5000).ifBlank{"История пока пуста."}).setPositiveButton("OK",null).setNegativeButton("Очистить историю"){_,_->prefs.edit().remove("history").remove("visual").apply();chat.removeAllViews();showWelcome()}.show()}
+    private fun showHistoryPanel(){showHistory()}
     private fun searchHistory(){val e=EditText(this);e.hint="Search history";AlertDialog.Builder(this).setTitle("Search").setView(e).setPositiveButton("Find"){_,_->val h=prefs.getString("history","")?:"";val q=e.text.toString();AlertDialog.Builder(this).setTitle("Results").setMessage(h.lines().filter{it.contains(q,true)}.joinToString("\n").take(5000).ifBlank{"Nothing found."}).setPositiveButton("OK",null).show()}.setNegativeButton("Cancel",null).show()}
     private fun openWeb(){
         val q=input.text.toString().trim()
@@ -465,7 +446,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun loadSaved() {
         val s = prefs.getString("visual", "") ?: ""
         if (s.isBlank()) {
-            addBubble("S.AI готов. Напиши, что нужно сделать — я отвечу без шаблонного приветствия.", false)
+            showWelcome()
         } else {
             s.split("\n---\n").forEach { part ->
                 if (part.startsWith("U:")) addBubble(part.substring(2), true)
@@ -476,7 +457,20 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun newChat() {
         chat.removeAllViews()
         prefs.edit().remove("visual").remove("history").apply()
-        addBubble("S.AI готов. Напиши, что нужно сделать — я отвечу без шаблонного приветствия.", false)
+        showWelcome()
+    }
+    private fun showWelcome() {
+        val welcome = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(16), dp(24), dp(16), dp(24)) }
+        welcome.addView(TextView(this).apply {
+            text = "S.AI"; textSize = 42f; typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            gravity = Gravity.CENTER; setTextColor(Color.WHITE); letterSpacing = .02f
+        })
+        welcome.addView(TextView(this).apply {
+            text = "Твой ИИ-помощник. Задавай вопросы,\nполучай ответы, создавай, думай."
+            textSize = 16f; gravity = Gravity.CENTER; setTextColor(Color.rgb(205,205,210))
+            setLineSpacing(dp(3).toFloat(), 1f); setPadding(0, dp(8), 0, 0)
+        })
+        chat.addView(welcome, LinearLayout.LayoutParams(-1, 0, 1f))
     }
     private fun saveVisual() {
         val a = mutableListOf<String>()
