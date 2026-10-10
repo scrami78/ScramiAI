@@ -70,9 +70,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(3), 0, dp(10))
         }
-        val menu = TextView(this).apply {
-            text = "☰"; textSize = 25f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
-            background = rounded(Color.TRANSPARENT, 22f, Color.TRANSPARENT)
+        val menu = ImageView(this).apply {
+            setImageResource(R.drawable.ic_sai_menu)
+            scaleType = ImageView.ScaleType.CENTER
             contentDescription = "История чатов"
             setOnClickListener { showHistoryPanel() }
         }
@@ -85,9 +85,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         status = TextView(this).apply {
             text = ""; visibility = View.GONE; textSize = 9f; setTextColor(Color.rgb(116,120,132))
         }
-        val avatar = TextView(this).apply {
-            text = "＋"; textSize = 28f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT
-            setTextColor(Color.WHITE); background = rounded(Color.rgb(30,30,34), 24f, Color.TRANSPARENT)
+        val avatar = ImageView(this).apply {
+            setImageResource(R.drawable.ic_sai_chat_add)
+            scaleType = ImageView.ScaleType.CENTER
+            background = rounded(Color.rgb(30,30,34), 24f, Color.TRANSPARENT)
             contentDescription = "Новый чат"
             setOnClickListener { newChat() }
         }
@@ -214,7 +215,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             clipToOutline = true
             elevation = dp(12).toFloat()
         }
-        val items = listOf("camera" to "Камера", "photo" to "Фото", "file" to "Файлы")
+        val items = listOf(
+            Triple("camera", "Камера", R.drawable.ic_sai_camera),
+            Triple("photo", "Изображение", R.drawable.ic_sai_image),
+            Triple("file", "Файл", R.drawable.ic_sai_file)
+        )
         val popup = PopupWindow(panel, dp(230), -2, true).apply {
             setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
             isOutsideTouchable = true
@@ -224,24 +229,26 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(16), 0, dp(14), 0)
+                setPadding(dp(16), 0, dp(12), 0)
                 isClickable = true
-                val icon = TextView(this@MainActivity).apply {
-                    text = when(item.first) { "camera" -> "▢"; "photo" -> "▧"; else -> "▤" }
-                    textSize = 23f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+                isFocusable = true
+                val icon = ImageView(this@MainActivity).apply {
+                    setImageResource(item.third)
+                    scaleType = ImageView.ScaleType.CENTER
+                    contentDescription = item.second
                 }
-                addView(icon, LinearLayout.LayoutParams(dp(42), dp(56)))
+                addView(icon, LinearLayout.LayoutParams(dp(28), dp(28)).apply { rightMargin = dp(14) })
                 addView(TextView(this@MainActivity).apply {
                     text = item.second; textSize = 16f; gravity = Gravity.CENTER_VERTICAL
                     setTextColor(Color.WHITE)
                 }, LinearLayout.LayoutParams(0, dp(56), 1f))
-                addView(TextView(this@MainActivity).apply {
-                    text = "›"; textSize = 24f; gravity = Gravity.CENTER
-                    setTextColor(Color.rgb(155,155,162))
-                }, LinearLayout.LayoutParams(dp(18), dp(56)))
+                addView(ImageView(this@MainActivity).apply {
+                    setImageResource(R.drawable.ic_sai_chevron)
+                    scaleType = ImageView.ScaleType.CENTER
+                }, LinearLayout.LayoutParams(dp(20), dp(28)))
                 setOnClickListener {
                     popup.dismiss()
-                    when(index) { 0 -> capturePhoto(); 1 -> pickImage(); 2 -> pickFile() }
+                    when(item.first) { "camera" -> capturePhoto(); "photo" -> pickImage(); else -> pickFile() }
                 }
             }
             panel.addView(row, LinearLayout.LayoutParams(-1, dp(56)))
@@ -698,10 +705,3 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     withContext(Dispatchers.Main){
                         input.setText(if(t.isBlank())"Attachment selected. Ask Scrami what to do with it." else "Analyze this document:\n"+t)
                         input.setSelection(input.text.length)
-                    }
-                }
-            }
-        }
-    }
-    override fun onDestroy(){recognizer?.destroy();tts?.shutdown();super.onDestroy();val m=model;if(m!=null)lifecycleScope.launch(Dispatchers.IO){try{Llama.releaseModel(m)}catch(_:Exception){}}}
-}
