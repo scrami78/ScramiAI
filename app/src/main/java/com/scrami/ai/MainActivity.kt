@@ -22,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import dev.ffmpegkit.llama.Llama
 import dev.ffmpegkit.llama.LlamaConfig
 import dev.ffmpegkit.llama.LlamaModel
@@ -53,6 +54,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.BLACK
+        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
         tts = TextToSpeech(this, this)
         buildUi()
         loadSaved()
@@ -60,10 +64,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun buildUi() {
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.rgb(15,16,20)) }
+        val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(14), dp(10), dp(14), dp(8))
+            setPadding(dp(14), statusBarHeight() + dp(6), dp(14), dp(8))
         }
 
         val header = LinearLayout(this).apply {
@@ -73,7 +77,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val menu = ImageView(this).apply {
             setImageResource(R.drawable.ic_sai_menu)
             scaleType = ImageView.ScaleType.CENTER
-            background = rounded(Color.argb(190, 38,39,45), 24f, Color.rgb(55,57,65))
+            background = rounded(Color.rgb(25,25,28), 24f, Color.rgb(52,52,57))
             contentDescription = "История чатов"
             setOnClickListener { showHistoryPanel() }
         }
@@ -98,7 +102,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         val modelBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
-            background = rounded(Color.argb(210, 27,29,35), 20f, Color.rgb(51,53,61))
+            background = rounded(Color.rgb(18,18,20), 20f, Color.rgb(42,42,46))
             setPadding(dp(12),0,dp(8),0)
         }
         modelLabel = TextView(this).apply {
@@ -126,7 +130,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         chatViewport.addView(View(this).apply {
             background = android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(Color.rgb(15,16,20), Color.TRANSPARENT)
+                intArrayOf(Color.BLACK, Color.TRANSPARENT)
             )
             isClickable = false
         }, FrameLayout.LayoutParams(-1, dp(22), Gravity.TOP))
@@ -142,7 +146,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 val composer = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(6), dp(6), dp(6), dp(6))
-            background = rounded(Color.argb(225, 35,36,42), 30f, Color.rgb(65,67,76))
+            background = rounded(Color.rgb(24,24,27), 28f, Color.rgb(54,54,59))
         }
         val plus = TextView(this).apply {
             text = "+"; textSize = 30f; gravity = Gravity.CENTER; typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
@@ -641,14 +645,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_sai_trash, 0, 0, 0)
             compoundDrawablePadding = dp(12)
             setPadding(dp(8), dp(18), 0, dp(12))
-            setOnClickListener {
-                AlertDialog.Builder(this@MainActivity).setTitle("Очистить историю?")
-                    .setMessage("Все сохранённые сообщения будут удалены.")
-                    .setNegativeButton("Отмена", null)
-                    .setPositiveButton("Очистить") { _, _ ->
-                        prefs.edit().remove("history").remove("visual").apply()
-                        chat.removeAllViews(); showWelcome(); dialog.dismiss()
-                    }.show()
+            setOnClickListener { showClearHistoryConfirmation { 
+                prefs.edit().remove("history").remove("visual").apply()
+                chat.removeAllViews()
+                showWelcome()
+                dialog.dismiss()
+            }
             }
         }
         panel.addView(clear)
@@ -669,6 +671,58 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             .setInterpolator(android.view.animation.DecelerateInterpolator(1.7f)).start()
         dialog.setOnDismissListener { }
     }
+    private fun showClearHistoryConfirmation(onConfirm: () -> Unit) {
+        val dialog = android.app.Dialog(this)
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(22), dp(22), dp(18))
+            background = rounded(Color.rgb(20,20,22), 24f, Color.rgb(55,55,60))
+        }
+        card.addView(TextView(this).apply {
+            text = "Очистить историю?"
+            textSize = 20f
+            typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            setTextColor(Color.WHITE)
+        })
+        card.addView(TextView(this).apply {
+            text = "Все сохранённые сообщения будут удалены. Это действие нельзя отменить."
+            textSize = 14f
+            setTextColor(Color.rgb(175,175,183))
+            setLineSpacing(dp(3).toFloat(), 1f)
+            setPadding(0, dp(10), 0, dp(22))
+        })
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val cancel = TextView(this).apply {
+            text = "Отмена"
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(225,225,230))
+            background = rounded(Color.rgb(39,39,43), 14f, Color.rgb(58,58,63))
+            setOnClickListener { dialog.dismiss() }
+        }
+        val confirm = TextView(this).apply {
+            text = "Очистить"
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            background = rounded(Color.rgb(170,43,50), 14f, Color.TRANSPARENT)
+            setOnClickListener { dialog.dismiss(); onConfirm() }
+        }
+        actions.addView(cancel, LinearLayout.LayoutParams(0, dp(46), 1f).apply { rightMargin = dp(8) })
+        actions.addView(confirm, LinearLayout.LayoutParams(0, dp(46), 1f).apply { leftMargin = dp(8) })
+        card.addView(actions)
+        dialog.setContentView(card)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.window?.setDimAmount(0.78f)
+        dialog.setOnShowListener { dialog.window?.setLayout((resources.displayMetrics.widthPixels * .88f).roundToInt(), -2) }
+        dialog.show()
+        dialog.window?.setLayout((resources.displayMetrics.widthPixels * .88f).roundToInt(), -2)
+    }
+
     private fun searchHistory(){val e=EditText(this);e.hint="Search history";AlertDialog.Builder(this).setTitle("Search").setView(e).setPositiveButton("Find"){_,_->val h=prefs.getString("history","")?:"";val q=e.text.toString();AlertDialog.Builder(this).setTitle("Results").setMessage(h.lines().filter{it.contains(q,true)}.joinToString("\n").take(5000).ifBlank{"Nothing found."}).setPositiveButton("OK",null).show()}.setNegativeButton("Cancel",null).show()}
     private fun openWeb(){
         val q=input.text.toString().trim()
@@ -749,6 +803,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
     private fun rounded(fill:Int,r:Float,stroke:Int)=GradientDrawable().apply{setColor(fill);cornerRadius=dp(r).toFloat();if(stroke!=Color.TRANSPARENT)setStroke(dp(1),stroke)}
     private fun grad(c:IntArray,r:Float)=GradientDrawable(GradientDrawable.Orientation.TL_BR,c).apply{cornerRadius=dp(r).toFloat()}
+    private fun statusBarHeight(): Int { val id = resources.getIdentifier("status_bar_height", "dimen", "android"); return if (id > 0) resources.getDimensionPixelSize(id) else dp(24) }
     private fun dp(v:Int)= (v*resources.displayMetrics.density).roundToInt()
     private fun dp(v:Float)= (v*resources.displayMetrics.density).roundToInt()
     override fun onActivityResult(req:Int,res:Int,data:Intent?){
