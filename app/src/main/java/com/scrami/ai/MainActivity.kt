@@ -20,6 +20,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import dev.ffmpegkit.llama.Llama
 import dev.ffmpegkit.llama.LlamaConfig
 import dev.ffmpegkit.llama.LlamaModel
@@ -54,6 +56,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (android.os.Build.VERSION.SDK_INT >= 21) {
             window.statusBarColor = Color.TRANSPARENT
             window.navigationBarColor = Color.BLACK
+            window.decorView.systemUiVisibility =
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
         }
         tts = TextToSpeech(this, this)
         buildUi()
@@ -67,6 +71,15 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(0), dp(14), dp(4))
             fitsSystemWindows = false
+        }
+        // Draw the chat under the transparent status bar, while keeping controls below its icons.
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val topInset = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            val imeInset = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            val navInset = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
+            main.setPadding(dp(14), topInset, dp(14), dp(4))
+            root.setPadding(0, 0, 0, if (imeInset > 0) imeInset else navInset)
+            insets
         }
 
         val header = LinearLayout(this).apply {
@@ -138,8 +151,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val composer = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(6), dp(6), dp(6), dp(6))
-            // Minimal ChatGPT-like composer: black and subtle outline, no glow.
-            background = rounded(Color.BLACK, 30f, Color.rgb(58,58,58))
+            // Transparent-looking composer: no gradient, no filled halo, no glow.
+            background = rounded(Color.TRANSPARENT, 30f, Color.rgb(65,65,65))
         }
         val plus = TextView(this).apply {
             text = "+"; textSize = 24f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
