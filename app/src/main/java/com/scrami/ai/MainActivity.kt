@@ -529,7 +529,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (historyDialog?.isShowing == true) return
         val dialog = android.app.Dialog(this)
         historyDialog = dialog
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.TRANSPARENT) }
         var panelTouchX = 0f
         var panelTouchY = 0f
         val root = object : FrameLayout(this) {
