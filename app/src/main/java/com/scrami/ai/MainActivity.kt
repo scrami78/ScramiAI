@@ -220,7 +220,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             isOutsideTouchable = true
             elevation = dp(12).toFloat()
         }
-        items.forEach { item ->
+        items.forEachIndexed { index, item ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
