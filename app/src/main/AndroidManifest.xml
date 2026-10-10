@@ -7,12 +7,21 @@
         <intent><action android:name="android.speech.RecognitionService" /></intent>
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
     </queries>
-    <application android:usesCleartextTraffic="false" android:allowBackup="true" android:icon="@drawable/scrami_icon" android:label="S.AI" android:theme="@style/Theme.ScramiAI" android:supportsRtl="true">
+    <application android:usesCleartextTraffic="false" android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:label="S.AI" android:theme="@style/Theme.ScramiAI" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/sai_file_paths" />
+        </provider>
     </application>
 </manifest>
