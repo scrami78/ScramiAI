@@ -4,9 +4,8 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path android:fillColor="#000000" android:pathData="M0,0h108v108h-108z"/>
-    <!-- Minimal white S.AI wordmark on a pure black field -->
-    <path android:fillColor="#FFFFFF" android:pathData="M14,36 C14,27 21,21 31,21 H53 C61,21 67,26 67,34 H55 C55,31 53,30 49,30 H32 C27,30 25,32 25,35 C25,38 28,40 32,40 H48 C61,40 69,46 69,57 C69,68 60,75 47,75 H29 C18,75 12,69 12,60 H24 C24,64 27,66 32,66 H47 C53,66 57,63 57,59 C57,55 53,53 47,53 H32 C21,53 14,47 14,36 Z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M71,67 A5,5 0,1 0 81,67 A5,5 0,1 0 71,67 Z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M88,22 C92,22 94,24 96,28 L108,74 H96 L93,63 H81 L77,74 H65 L82,29 C84,24 86,22 88,22 Z M84,53 H91 L88,41 Z"/>
-    <path android:fillColor="#FFFFFF" android:pathData="M97,22 H106 V74 H97 Z"/>
+    <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M22,32 C22,25 27,21 34,21 H49 C57,21 62,26 62,33 H51 C51,31 50,30 47,30 H35 C32,30 31,31 31,33 C31,35 32,36 36,37 L49,40 C58,42 63,47 63,55 C63,63 57,68 48,68 H33 C25,68 20,63 20,56 H31 C31,59 33,60 36,60 H47 C50,60 52,59 52,56 C52,54 50,52 46,51 L33,48 C25,46 22,41 22,32 Z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M66,60h7v8h-7z"/>
+    <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M83,22 H91 L106,68 H95 L92,58 H80 L77,68 H66 Z M83,49 H89 L86,38 Z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M94,22h10v46h-10z"/>
 </vector>
