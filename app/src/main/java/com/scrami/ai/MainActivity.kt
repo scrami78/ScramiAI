@@ -113,10 +113,31 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         modelBar.visibility = View.GONE
         main.addView(modelBar)
 
-        val scroll = ScrollView(this).apply { isFillViewport = true; overScrollMode = View.OVER_SCROLL_NEVER }
+        val scroll = ScrollView(this).apply {
+            isFillViewport = true
+            overScrollMode = View.OVER_SCROLL_NEVER
+            clipToPadding = false
+            setPadding(0, dp(10), 0, dp(14))
+        }
         chat = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0,dp(10),0,dp(14)) }
         scroll.addView(chat)
-        main.addView(scroll, LinearLayout.LayoutParams(-1,0,1f))
+        val chatViewport = FrameLayout(this)
+        chatViewport.addView(scroll, FrameLayout.LayoutParams(-1,-1))
+        chatViewport.addView(View(this).apply {
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(Color.rgb(15,16,20), Color.TRANSPARENT)
+            )
+            isClickable = false
+        }, FrameLayout.LayoutParams(-1, dp(22), Gravity.TOP))
+        chatViewport.addView(View(this).apply {
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP,
+                intArrayOf(Color.rgb(15,16,20), Color.TRANSPARENT)
+            )
+            isClickable = false
+        }, FrameLayout.LayoutParams(-1, dp(26), Gravity.BOTTOM))
+        main.addView(chatViewport, LinearLayout.LayoutParams(-1,0,1f))
 
                 val composer = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -124,10 +145,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             background = rounded(Color.argb(225, 35,36,42), 30f, Color.rgb(65,67,76))
         }
         val plus = TextView(this).apply {
-            text = "+"; textSize = 27f; gravity = Gravity.CENTER; typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
-            setTextColor(Color.WHITE); background = rounded(Color.argb(220, 54,55,62), 24f, Color.rgb(76,78,87)); contentDescription = "Добавить вложение"; setOnClickListener { showAttachMenu(this) }
+            text = "+"; textSize = 30f; gravity = Gravity.CENTER; typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+            setTextColor(Color.WHITE); background = null; contentDescription = "Добавить вложение"; setOnClickListener { showAttachMenu(this) }
         }
-        composer.addView(plus, LinearLayout.LayoutParams(dp(42),dp(48)))
+        composer.addView(plus, LinearLayout.LayoutParams(dp(34),dp(48)))
         input = EditText(this).apply {
             hint = "Напиши сообщение..."; setHintTextColor(Color.rgb(165,165,170)); setTextColor(Color.WHITE)
             textSize = 16f; maxLines = 5; minLines = 1; gravity = Gravity.CENTER_VERTICAL
@@ -140,7 +161,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             elevation = dp(2).toFloat()
             setOnClickListener { sendMessage() }
         }
-        composer.addView(send, LinearLayout.LayoutParams(dp(46),dp(46)).apply { leftMargin = dp(2) })
+        composer.addView(send, LinearLayout.LayoutParams(dp(44),dp(44)).apply { leftMargin = dp(3) })
         main.addView(composer)
 
         // Clean chat layout: remove technical footer clutter.
@@ -524,7 +545,28 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         showSleekDialog(dialog)
     }
     private var historyDialog: android.app.Dialog? = null
-    private fun dismissHistoryPanel(){ historyDialog?.dismiss(); historyDialog = null }
+    private var historyPanel: View? = null
+    private fun dismissHistoryPanel(){
+        val dialog = historyDialog ?: return
+        val panel = historyPanel
+        if (panel == null || !dialog.isShowing) {
+            dialog.dismiss()
+            historyDialog = null
+            historyPanel = null
+            return
+        }
+        panel.animate().cancel()
+        panel.animate().translationX(-panel.width.toFloat())
+            .setDuration(155)
+            .setInterpolator(android.view.animation.AccelerateInterpolator())
+            .withEndAction {
+                if (historyDialog === dialog) {
+                    dialog.dismiss()
+                    historyDialog = null
+                    historyPanel = null
+                }
+            }.start()
+    }
     private fun showHistoryPanel(){
         if (historyDialog?.isShowing == true) return
         val dialog = android.app.Dialog(this)
@@ -538,7 +580,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     android.view.MotionEvent.ACTION_UP -> {
                         val dx = ev.rawX - panelTouchX
                         val dy = kotlin.math.abs(ev.rawY - panelTouchY)
-                        if (dx < -dp(48) && dy < dp(110)) { dialog.dismiss(); return true }
+                        if (dx < -dp(48) && dy < dp(110)) { dismissHistoryPanel(); return true }
                     }
                 }
                 return super.dispatchTouchEvent(ev)
@@ -611,6 +653,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         panel.addView(clear)
         root.addView(panel, FrameLayout.LayoutParams((resources.displayMetrics.widthPixels * .82f).roundToInt(), -1, Gravity.START))
+        historyPanel = panel
         dialog.setContentView(root)
         dialog.window?.let { w ->
             w.setBackgroundDrawableResource(android.R.color.transparent)
@@ -621,8 +664,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         dialog.show()
         dialog.window?.setLayout(-1, -1)
-        panel.translationX = -dp(340).toFloat()
-        panel.animate().translationX(0f).setDuration(145).setInterpolator(AccelerateDecelerateInterpolator()).start()
+        panel.translationX = -panel.width.toFloat().coerceAtLeast(dp(280).toFloat())
+        panel.animate().translationX(0f).setDuration(165)
+            .setInterpolator(android.view.animation.DecelerateInterpolator(1.7f)).start()
         dialog.setOnDismissListener { }
     }
     private fun searchHistory(){val e=EditText(this);e.hint="Search history";AlertDialog.Builder(this).setTitle("Search").setView(e).setPositiveButton("Find"){_,_->val h=prefs.getString("history","")?:"";val q=e.text.toString();AlertDialog.Builder(this).setTitle("Results").setMessage(h.lines().filter{it.contains(q,true)}.joinToString("\n").take(5000).ifBlank{"Nothing found."}).setPositiveButton("OK",null).show()}.setNegativeButton("Cancel",null).show()}
