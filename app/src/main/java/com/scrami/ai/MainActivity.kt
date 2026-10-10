@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.core.content.FileProvider
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -48,6 +49,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = null
     private var recognizer: SpeechRecognizer? = null
     private var pendingMessage: String? = null
+    private var pendingPhotoFile: File? = null
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
@@ -193,8 +195,13 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             android.view.MotionEvent.ACTION_UP -> {
                 val dx = ev.rawX - gestureStartX
                 val dy = kotlin.math.abs(ev.rawY - gestureStartY)
-                if (dx > dp(72) && dy < dp(130) && gestureStartX < dp(64)) showHistoryPanel()
-                else if (dx < -dp(72) && dy < dp(130)) dismissHistoryPanel()
+                val edge = dp(36)
+                val threshold = dp(56)
+                if (historyDialog?.isShowing != true && gestureStartX <= edge && dx >= threshold && dy < dp(160)) {
+                    showHistoryPanel()
+                } else if (historyDialog?.isShowing == true && dx <= -threshold && dy < dp(160)) {
+                    dismissHistoryPanel()
+                }
             }
         }
         return super.dispatchTouchEvent(ev)
@@ -263,10 +270,25 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         dialog.show()
     }
     private fun pickImage(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="image/*";addCategory(Intent.CATEGORY_OPENABLE)},45)}
-    private fun capturePhoto(){
-        val intent=Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
-        if(intent.resolveActivity(packageManager)==null){Toast.makeText(this,"Камера недоступна на устройстве.",Toast.LENGTH_SHORT).show();return}
-        startActivityForResult(intent,46)
+    private fun capturePhoto() {
+        try {
+            val intent = Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
+            if (intent.resolveActivity(packageManager) == null) {
+                Toast.makeText(this, "Камера недоступна на устройстве.", Toast.LENGTH_LONG).show()
+                return
+            }
+            val photo = File(cacheDir, "sai_photo_${System.currentTimeMillis()}.jpg")
+            if (!photo.createNewFile()) throw IllegalStateException("Не удалось создать файл фотографии")
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", photo)
+            pendingPhotoFile = photo
+            intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, uri)
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            startActivityForResult(intent, 46)
+        } catch (e: Exception) {
+            pendingPhotoFile?.delete()
+            pendingPhotoFile = null
+            Toast.makeText(this, "Не удалось открыть камеру: ${e.localizedMessage ?: "ошибка устройства"}", Toast.LENGTH_LONG).show()
+        }
     }
     private fun showMemory(){val m=prefs.getString("memory","")?:"";AlertDialog.Builder(this).setTitle("S.AI Memory").setMessage(if(m.isBlank())"Memory is empty. Say: “remember that …”" else m).setPositiveButton("Add"){_,_->val e=EditText(this);e.hint="What should Scrami remember?";AlertDialog.Builder(this).setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("memory",(m+"\n"+e.text.toString()).trim()).apply()}.setNegativeButton("Cancel",null).show()}.setNegativeButton("Clear"){_,_->prefs.edit().remove("memory").apply()}.show()}
     private fun accountDialog(){val current=prefs.getString("account","Scrami User")?:"Scrami User";val e=EditText(this);e.setText(current);e.hint="Account name";AlertDialog.Builder(this).setTitle("S.AI Account").setMessage("Local account on this device. Cloud sign-in can be connected later.").setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("account",e.text.toString().ifBlank{"Scrami User"}).apply();Toast.makeText(this,"Account saved",Toast.LENGTH_SHORT).show()}.setNegativeButton("Cancel",null).show()}
@@ -653,15 +675,17 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     override fun onActivityResult(req:Int,res:Int,data:Intent?){
         super.onActivityResult(req,res,data)
         if(res!=RESULT_OK)return
-        if(req==46){
-            val bitmap=data?.extras?.get("data") as? android.graphics.Bitmap
-            if(bitmap!=null){
-                val file=File(cacheDir,"photo_${System.currentTimeMillis()}.jpg")
-                try{FileOutputStream(file).use{bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG,92,it)}}catch(_:Exception){}
+        if (req == 46) {
+            val file = pendingPhotoFile
+            pendingPhotoFile = null
+            if (file != null && file.exists() && file.length() > 0L) {
+                input.setText("Фото сделано (${file.name}). Опиши, что нужно с ним сделать.")
+                input.setSelection(input.text.length)
+                Toast.makeText(this, "Фото сохранено.", Toast.LENGTH_SHORT).show()
+            } else {
+                file?.delete()
+                Toast.makeText(this, "Съёмка отменена или камера не сохранила фото.", Toast.LENGTH_SHORT).show()
             }
-            input.setText("PHOTO CAPTURED. Describe what S.AI should do with this photo.")
-            input.setSelection(input.text.length)
-            Toast.makeText(this,"Фото сделано и готово к отправке.",Toast.LENGTH_SHORT).show()
             return
         }
         if(data?.data!=null){
