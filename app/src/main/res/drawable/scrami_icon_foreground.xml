@@ -1,9 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <group android:scaleX="0.88" android:scaleY="0.88" android:pivotX="54" android:pivotY="54">
-        <path android:fillColor="#FFFFFFFF" android:pathData="M17,34 C17,26 23,22 31,22 H43 C51,22 56,26 56,33 H45 C45,31 44,30 41,30 H32 C29,30 27,31 27,33 C27,35 29,36 33,37 L44,40 C53,42 57,47 57,54 C57,62 51,67 42,67 H29 C21,67 16,62 16,55 H27 C27,58 29,59 32,59 H42 C45,59 46,58 46,55 C46,53 44,52 40,51 L29,48 C21,46 17,42 17,34 Z"/>
-        <path android:fillColor="#FFFFFFFF" android:pathData="M59,59h7v8h-7z"/>
-        <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M72,22h8l15,45h-11l-3,-10h-11l-3,10h-11z M73,49h6l-3,-11z"/>
-        <path android:fillColor="#FFFFFFFF" android:pathData="M91,22h9v45h-9z"/>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:scaleX="0.96" android:scaleY="0.96" android:pivotX="54" android:pivotY="54">
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M35,30 C35,23 30,19 23,19 H17 C9,19 5,23 5,30 C5,36 9,39 17,41 L25,43 C29,44 30,46 30,48 C30,52 27,54 23,54 H17 C13,54 11,52 11,49 H4 C4,57 9,61 17,61 H24 C32,61 37,56 37,48 C37,41 33,38 25,36 L17,34 C13,33 12,32 12,30 C12,28 14,26 17,26 H23 C27,26 28,28 28,30 Z" />
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M40,52 H47 V61 H40 Z" />
+        <path
+            android:fillColor="#FF000000"
+            android:fillType="evenOdd"
+            android:pathData="M52,61 L64,20 H72 L84,61 H76 L73,51 H63 L60,61 Z M65,44 H71 L68,32 Z" />
+        <path
+            android:fillColor="#FF000000"
+            android:pathData="M89,20 H97 V61 H89 Z" />
     </group>
 </vector>
