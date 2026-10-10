@@ -50,6 +50,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        if (android.os.Build.VERSION.SDK_INT >= 21) {
+            window.statusBarColor = Color.TRANSPARENT
+            window.navigationBarColor = Color.BLACK
+        }
         tts = TextToSpeech(this, this)
         buildUi()
         loadSaved()
@@ -57,10 +62,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun buildUi() {
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.rgb(7,8,11)) }
+        val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(14), dp(10), dp(14), dp(8))
+            setPadding(dp(14), dp(0), dp(14), dp(4))
+            fitsSystemWindows = false
         }
 
         val header = LinearLayout(this).apply {
@@ -132,7 +138,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val composer = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(6), dp(6), dp(6), dp(6))
-            background = rounded(Color.rgb(22,24,30), 30f, Color.rgb(52,55,65))
+            // Minimal ChatGPT-like composer: black and subtle outline, no glow.
+            background = rounded(Color.BLACK, 30f, Color.rgb(58,58,58))
         }
         val plus = TextView(this).apply {
             text = "+"; textSize = 24f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
