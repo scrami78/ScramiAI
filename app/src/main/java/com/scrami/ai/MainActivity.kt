@@ -532,20 +532,22 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val root = FrameLayout(this).apply { setBackgroundColor(Color.TRANSPARENT) }
         var panelTouchX = 0f
         var panelTouchY = 0f
-        val dim = View(this).apply {
-            setBackgroundColor(0x99000000.toInt())
-            setOnClickListener { dialog.dismiss() }
-            setOnTouchListener { _, ev ->
+        val root = object : FrameLayout(this) {
+            override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
                 when (ev.actionMasked) {
-                    android.view.MotionEvent.ACTION_DOWN -> { panelTouchX = ev.rawX; panelTouchY = ev.rawY; false }
+                    android.view.MotionEvent.ACTION_DOWN -> { panelTouchX = ev.rawX; panelTouchY = ev.rawY }
                     android.view.MotionEvent.ACTION_UP -> {
                         val dx = ev.rawX - panelTouchX
                         val dy = kotlin.math.abs(ev.rawY - panelTouchY)
-                        if (dx < -dp(48) && dy < dp(100)) { dialog.dismiss(); true } else false
+                        if (dx < -dp(48) && dy < dp(110)) { dialog.dismiss(); return true }
                     }
-                    else -> false
                 }
+                return super.dispatchTouchEvent(ev)
             }
+        }.apply { setBackgroundColor(Color.TRANSPARENT) }
+        val dim = View(this).apply {
+            setBackgroundColor(0x99000000.toInt())
+            setOnClickListener { dialog.dismiss() }
         }
         root.addView(dim, FrameLayout.LayoutParams(-1,-1))
         val panel = LinearLayout(this).apply {
