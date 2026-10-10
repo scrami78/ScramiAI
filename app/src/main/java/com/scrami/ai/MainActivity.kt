@@ -83,7 +83,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             text = ""; visibility = View.GONE; textSize = 9f; setTextColor(Color.rgb(116,120,132))
         }
         val avatar = TextView(this).apply {
-            text = "☏+"; textSize = 23f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT
+            text = "＋"; textSize = 28f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT
             setTextColor(Color.WHITE); background = rounded(Color.rgb(30,30,34), 24f, Color.TRANSPARENT)
             contentDescription = "Новый чат"
             setOnClickListener { newChat() }
