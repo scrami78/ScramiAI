@@ -16,6 +16,8 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.widget.*
+import android.graphics.drawable.GradientDrawable
+import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.core.app.ActivityCompat
@@ -57,7 +59,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun buildUi() {
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.rgb(7,8,11)) }
+        val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(10), dp(14), dp(8))
@@ -116,11 +118,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 val composer = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(6), dp(6), dp(6), dp(6))
-            background = rounded(Color.rgb(22,24,30), 30f, Color.rgb(52,55,65))
+            background = rounded(Color.rgb(22,22,25), 30f, Color.rgb(48,48,54))
         }
         val plus = TextView(this).apply {
-            text = "+"; textSize = 24f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE); setOnClickListener { showAttachMenu() }
+            text = "+"; textSize = 28f; gravity = Gravity.CENTER; typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+            setTextColor(Color.WHITE); contentDescription = "Добавить вложение"; setOnClickListener { showAttachMenu(this) }
         }
         composer.addView(plus, LinearLayout.LayoutParams(dp(42),dp(48)))
         input = EditText(this).apply {
@@ -129,12 +131,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             setSingleLine(false); includeFontPadding = false; setPadding(dp(8),0,dp(8),0); background = null
         }
         composer.addView(input, LinearLayout.LayoutParams(0,dp(48),1f))
-        val mic = TextView(this).apply {
-            text = "♩"; textSize = 23f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
-            contentDescription = "Голосовой ввод"
-            setOnClickListener { startVoice() }
-        }
-        composer.addView(mic, LinearLayout.LayoutParams(dp(42),dp(48)))
         send = TextView(this).apply {
             text = "↑"; textSize = 22f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
             setTextColor(Color.BLACK); background = rounded(Color.WHITE, 23f, Color.TRANSPARENT)
@@ -198,64 +194,61 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             android.view.MotionEvent.ACTION_UP -> {
                 val dx = ev.rawX - gestureStartX
                 val dy = kotlin.math.abs(ev.rawY - gestureStartY)
-                if (gestureStartX < dp(24) && dx > dp(90) && dy < dp(100)) {
-                    showHistoryPanel()
-                }
+                if (dx > dp(72) && dy < dp(130) && gestureStartX < dp(64)) showHistoryPanel()
+                else if (dx < -dp(72) && dy < dp(130)) dismissHistoryPanel()
             }
         }
         return super.dispatchTouchEvent(ev)
     }
 
-    private fun showAttachMenu(){
-        val dialog = android.app.Dialog(this)
+    private fun showAttachMenu(anchor: View){
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = rounded(Color.rgb(20,20,23), 24f, Color.rgb(48,48,54))
+            background = rounded(Color.rgb(20,20,23), 20f, Color.rgb(48,48,54))
             clipToOutline = true
+            elevation = dp(12).toFloat()
         }
-        val options = listOf("📷" to "Камера", "▧" to "Фото", "▤" to "Файлы")
-        options.forEachIndexed { index, item ->
+        val items = listOf("camera" to "Камера", "photo" to "Фото", "file" to "Файлы")
+        val popup = PopupWindow(panel, dp(230), -2, true).apply {
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+            isOutsideTouchable = true
+            elevation = dp(12).toFloat()
+        }
+        items.forEachIndexed { index, item ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(22), 0, dp(18), 0)
+                setPadding(dp(16), 0, dp(14), 0)
                 isClickable = true
-                setBackgroundResource(android.R.drawable.list_selector_background)
+                val icon = TextView(this@MainActivity).apply {
+                    text = when(item.first) { "camera" -> "▢"; "photo" -> "▧"; else -> "▤" }
+                    textSize = 23f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+                }
+                addView(icon, LinearLayout.LayoutParams(dp(42), dp(56)))
                 addView(TextView(this@MainActivity).apply {
-                    text = item.first; textSize = 20f; gravity = Gravity.CENTER
+                    text = item.second; textSize = 16f; gravity = Gravity.CENTER_VERTICAL
                     setTextColor(Color.WHITE)
-                }, LinearLayout.LayoutParams(dp(38), -1))
-                addView(TextView(this@MainActivity).apply {
-                    text = item.second; textSize = 17f; gravity = Gravity.CENTER_VERTICAL
-                    setTextColor(Color.WHITE)
-                }, LinearLayout.LayoutParams(0, -1, 1f))
+                }, LinearLayout.LayoutParams(0, dp(56), 1f))
                 addView(TextView(this@MainActivity).apply {
                     text = "›"; textSize = 24f; gravity = Gravity.CENTER
                     setTextColor(Color.rgb(155,155,162))
-                }, LinearLayout.LayoutParams(dp(22), -1))
+                }, LinearLayout.LayoutParams(dp(18), dp(56)))
                 setOnClickListener {
-                    dialog.dismiss()
-                    when(index){0->capturePhoto();1->pickImage();2->pickFile()}
+                    popup.dismiss()
+                    when(index) { 0 -> capturePhoto(); 1 -> pickImage(); 2 -> pickFile() }
                 }
             }
-            panel.addView(row, LinearLayout.LayoutParams(-1, dp(58)))
-            if (index < options.lastIndex) panel.addView(View(this).apply {
+            panel.addView(row, LinearLayout.LayoutParams(-1, dp(56)))
+            if(index < items.lastIndex) panel.addView(View(this).apply {
                 setBackgroundColor(Color.rgb(48,48,53))
             }, LinearLayout.LayoutParams(-1, dp(1)))
         }
-        dialog.setContentView(panel)
-        dialog.window?.let { w ->
-            w.setBackgroundDrawableResource(android.R.color.transparent)
-            w.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            w.setDimAmount(.68f)
-            w.setLayout((resources.displayMetrics.widthPixels - dp(36)), -2)
-            w.setGravity(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
-            w.attributes = w.attributes.apply { y = dp(88) }
+        popup.showAsDropDown(anchor, -dp(4), -dp(190), Gravity.TOP or Gravity.START)
+        panel.post {
+            val location = IntArray(2); anchor.getLocationOnScreen(location)
+            val y = location[1] - panel.height - dp(8)
+            if (y > dp(24)) popup.update(location[0] - dp(2), y, dp(230), -2)
         }
-        dialog.show()
-        dialog.window?.setLayout(resources.displayMetrics.widthPixels - dp(36), -2)
-        dialog.window?.setGravity(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
-        dialog.window?.attributes = dialog.window?.attributes?.apply { y = dp(88) }
     }
     private fun showSleekDialog(dialog:AlertDialog){
         dialog.setOnShowListener {
@@ -342,19 +335,35 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }.setNegativeButton("Cancel",null).show()
 }
     private fun splash() {
-        val overlay=FrameLayout(this).apply{setBackgroundColor(Color.rgb(8,9,13))}
-        val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER}
-        box.addView(TextView(this).apply{text="S.AI";gravity=Gravity.CENTER;textSize=30f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);background=rounded(Color.BLACK,32f,Color.rgb(48,48,54));letterSpacing=.08f},LinearLayout.LayoutParams(dp(96),dp(96)))
-        box.addView(TextView(this).apply{text="S.AI";textSize=28f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);gravity=Gravity.CENTER;setPadding(0,dp(18),0,dp(4));letterSpacing=.12f})
-        box.addView(TextView(this).apply{text="ТВОЙ ИИ-ПОМОЩНИК";textSize=11f;setTextColor(Color.rgb(145,139,160));gravity=Gravity.CENTER;letterSpacing=.14f})
-        overlay.addView(box,FrameLayout.LayoutParams(-1,-1))
-        addContentView(overlay,FrameLayout.LayoutParams(-1,-1))
-        overlay.alpha=0f
-        overlay.animate().alpha(1f).setDuration(250).withEndAction{
-            overlay.animate().alpha(0f).setDuration(450).setStartDelay(450).withEndAction{
+        val overlay = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER }
+        box.addView(TextView(this).apply {
+            text = "S.AI"; gravity = Gravity.CENTER; textSize = 43f
+            typeface = Typeface.create("sans-serif", Typeface.BOLD); setTextColor(Color.WHITE)
+            letterSpacing = .02f
+        }, LinearLayout.LayoutParams(-1, dp(64)))
+        val dots = LinearLayout(this).apply { gravity = Gravity.CENTER; orientation = LinearLayout.HORIZONTAL; setPadding(0, dp(20), 0, 0) }
+        val dotViews = (0..2).map {
+            View(this).apply { background = rounded(Color.rgb(90,90,96), 8f, Color.TRANSPARENT); alpha = .35f }
+                .also { dots.addView(it, LinearLayout.LayoutParams(dp(7), dp(7)).apply { leftMargin = dp(5); rightMargin = dp(5) }) }
+        }
+        box.addView(dots)
+        overlay.addView(box, FrameLayout.LayoutParams(-1, -1))
+        addContentView(overlay, FrameLayout.LayoutParams(-1, -1))
+        overlay.alpha = 0f
+        overlay.animate().alpha(1f).setDuration(180).start()
+        dotViews.forEachIndexed { index, dot ->
+            val anim = android.animation.ObjectAnimator.ofFloat(dot, "alpha", .25f, 1f, .25f).apply {
+                duration = 720L; startDelay = index * 180L; repeatCount = android.animation.ValueAnimator.INFINITE
+                interpolator = AccelerateDecelerateInterpolator()
+            }
+            anim.start()
+        }
+        overlay.postDelayed({
+            overlay.animate().alpha(0f).setDuration(250).withEndAction {
                 (overlay.parent as? android.view.ViewGroup)?.removeView(overlay)
             }.start()
-        }.start()
+        }, 1350L)
     }
 
     private fun ensureModel() {
@@ -477,8 +486,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }.create()
         showSleekDialog(dialog)
     }
+    private var historyDialog: android.app.Dialog? = null
+    private fun dismissHistoryPanel(){ historyDialog?.dismiss(); historyDialog = null }
     private fun showHistoryPanel(){
+        if (historyDialog?.isShowing == true) return
         val dialog = android.app.Dialog(this)
+        historyDialog = dialog
         val root = FrameLayout(this).apply { setBackgroundColor(Color.TRANSPARENT) }
         val dim = View(this).apply { setBackgroundColor(0x99000000.toInt()); setOnClickListener { dialog.dismiss() } }
         root.addView(dim, FrameLayout.LayoutParams(-1,-1))
@@ -541,7 +554,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
         }
         panel.addView(clear)
-        root.addView(panel, FrameLayout.LayoutParams((resources.displayMetrics.widthPixels * .84f).roundToInt(), -1, Gravity.START))
+        root.addView(panel, FrameLayout.LayoutParams((resources.displayMetrics.widthPixels * .82f).roundToInt(), -1, Gravity.START))
         dialog.setContentView(root)
         dialog.window?.let { w ->
             w.setBackgroundDrawableResource(android.R.color.transparent)
