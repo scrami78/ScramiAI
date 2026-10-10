@@ -60,7 +60,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun buildUi() {
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
+        val root = FrameLayout(this).apply { setBackgroundColor(Color.rgb(15,16,20)) }
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(10), dp(14), dp(8))
@@ -73,6 +73,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val menu = ImageView(this).apply {
             setImageResource(R.drawable.ic_sai_menu)
             scaleType = ImageView.ScaleType.CENTER
+            background = rounded(Color.argb(190, 38,39,45), 24f, Color.rgb(55,57,65))
             contentDescription = "История чатов"
             setOnClickListener { showHistoryPanel() }
         }
@@ -88,7 +89,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val avatar = ImageView(this).apply {
             setImageResource(R.drawable.ic_sai_chat_add)
             scaleType = ImageView.ScaleType.CENTER
-            background = rounded(Color.rgb(30,30,34), 24f, Color.TRANSPARENT)
+            background = rounded(Color.argb(190, 38,39,45), 24f, Color.rgb(55,57,65))
             contentDescription = "Новый чат"
             setOnClickListener { newChat() }
         }
@@ -97,7 +98,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         val modelBar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
-            background = rounded(Color.rgb(15,17,22), 18f, Color.rgb(37,40,48))
+            background = rounded(Color.argb(210, 27,29,35), 20f, Color.rgb(51,53,61))
             setPadding(dp(12),0,dp(8),0)
         }
         modelLabel = TextView(this).apply {
@@ -120,11 +121,11 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 val composer = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(6), dp(6), dp(6), dp(6))
-            background = rounded(Color.rgb(22,22,25), 30f, Color.rgb(48,48,54))
+            background = rounded(Color.argb(225, 35,36,42), 30f, Color.rgb(65,67,76))
         }
         val plus = TextView(this).apply {
-            text = "+"; textSize = 28f; gravity = Gravity.CENTER; typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
-            setTextColor(Color.WHITE); contentDescription = "Добавить вложение"; setOnClickListener { showAttachMenu(this) }
+            text = "+"; textSize = 27f; gravity = Gravity.CENTER; typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+            setTextColor(Color.WHITE); background = rounded(Color.argb(220, 54,55,62), 24f, Color.rgb(76,78,87)); contentDescription = "Добавить вложение"; setOnClickListener { showAttachMenu(this) }
         }
         composer.addView(plus, LinearLayout.LayoutParams(dp(42),dp(48)))
         input = EditText(this).apply {
@@ -136,6 +137,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         send = TextView(this).apply {
             text = "↑"; textSize = 22f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
             setTextColor(Color.BLACK); background = rounded(Color.WHITE, 23f, Color.TRANSPARENT)
+            elevation = dp(2).toFloat()
             setOnClickListener { sendMessage() }
         }
         composer.addView(send, LinearLayout.LayoutParams(dp(46),dp(46)).apply { leftMargin = dp(2) })
@@ -201,10 +203,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     val dy = kotlin.math.abs(ev.rawY - gestureStartY)
                     // Do not require a perfect edge start: Android gesture navigation and
                     // some launchers reserve the first few pixels at the screen edge.
-                    if (dy < dp(85) && dx >= dp(96) && historyDialog?.isShowing != true) {
+                    if (dy < dp(100) && dx >= dp(52) && historyDialog?.isShowing != true) {
                         gestureHandled = true
                         showHistoryPanel()
-                    } else if (dy < dp(85) && dx <= -dp(96) && historyDialog?.isShowing == true) {
+                    } else if (dy < dp(100) && dx <= -dp(52) && historyDialog?.isShowing == true) {
                         gestureHandled = true
                         dismissHistoryPanel()
                     }
@@ -214,8 +216,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 if (!gestureHandled) {
                     val dx = ev.rawX - gestureStartX
                     val dy = kotlin.math.abs(ev.rawY - gestureStartY)
-                    if (dy < dp(100) && dx >= dp(96) && historyDialog?.isShowing != true) showHistoryPanel()
-                    else if (dy < dp(100) && dx <= -dp(96) && historyDialog?.isShowing == true) dismissHistoryPanel()
+                    if (dy < dp(110) && dx >= dp(52) && historyDialog?.isShowing != true) showHistoryPanel()
+                    else if (dy < dp(110) && dx <= -dp(52) && historyDialog?.isShowing == true) dismissHistoryPanel()
                 }
             }
         }
@@ -528,7 +530,23 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val dialog = android.app.Dialog(this)
         historyDialog = dialog
         val root = FrameLayout(this).apply { setBackgroundColor(Color.TRANSPARENT) }
-        val dim = View(this).apply { setBackgroundColor(0x99000000.toInt()); setOnClickListener { dialog.dismiss() } }
+        var panelTouchX = 0f
+        var panelTouchY = 0f
+        val dim = View(this).apply {
+            setBackgroundColor(0x99000000.toInt())
+            setOnClickListener { dialog.dismiss() }
+            setOnTouchListener { _, ev ->
+                when (ev.actionMasked) {
+                    android.view.MotionEvent.ACTION_DOWN -> { panelTouchX = ev.rawX; panelTouchY = ev.rawY; false }
+                    android.view.MotionEvent.ACTION_UP -> {
+                        val dx = ev.rawX - panelTouchX
+                        val dy = kotlin.math.abs(ev.rawY - panelTouchY)
+                        if (dx < -dp(48) && dy < dp(100)) { dialog.dismiss(); true } else false
+                    }
+                    else -> false
+                }
+            }
+        }
         root.addView(dim, FrameLayout.LayoutParams(-1,-1))
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -603,7 +621,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         dialog.show()
         dialog.window?.setLayout(-1, -1)
         panel.translationX = -dp(340).toFloat()
-        panel.animate().translationX(0f).setDuration(220).start()
+        panel.animate().translationX(0f).setDuration(145).setInterpolator(AccelerateDecelerateInterpolator()).start()
         dialog.setOnDismissListener { }
     }
     private fun searchHistory(){val e=EditText(this);e.hint="Search history";AlertDialog.Builder(this).setTitle("Search").setView(e).setPositiveButton("Find"){_,_->val h=prefs.getString("history","")?:"";val q=e.text.toString();AlertDialog.Builder(this).setTitle("Results").setMessage(h.lines().filter{it.contains(q,true)}.joinToString("\n").take(5000).ifBlank{"Nothing found."}).setPositiveButton("OK",null).show()}.setNegativeButton("Cancel",null).show()}
