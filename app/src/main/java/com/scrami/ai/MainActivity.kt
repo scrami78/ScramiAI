@@ -199,21 +199,23 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 if (!gestureHandled) {
                     val dx = ev.rawX - gestureStartX
                     val dy = kotlin.math.abs(ev.rawY - gestureStartY)
-                    if (dy < dp(90) && dx >= dp(72) && gestureStartX <= dp(48) && historyDialog?.isShowing != true) {
+                    // Do not require a perfect edge start: Android gesture navigation and
+                    // some launchers reserve the first few pixels at the screen edge.
+                    if (dy < dp(85) && dx >= dp(96) && historyDialog?.isShowing != true) {
                         gestureHandled = true
                         showHistoryPanel()
-                    } else if (dy < dp(90) && dx <= -dp(72) && historyDialog?.isShowing == true) {
+                    } else if (dy < dp(85) && dx <= -dp(96) && historyDialog?.isShowing == true) {
                         gestureHandled = true
                         dismissHistoryPanel()
                     }
                 }
             }
-            android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
-                if (!gestureHandled && ev.actionMasked == android.view.MotionEvent.ACTION_UP) {
+            android.view.MotionEvent.ACTION_UP -> {
+                if (!gestureHandled) {
                     val dx = ev.rawX - gestureStartX
                     val dy = kotlin.math.abs(ev.rawY - gestureStartY)
-                    if (dy < dp(120) && dx >= dp(72) && gestureStartX <= dp(48) && historyDialog?.isShowing != true) showHistoryPanel()
-                    else if (dy < dp(120) && dx <= -dp(72) && historyDialog?.isShowing == true) dismissHistoryPanel()
+                    if (dy < dp(100) && dx >= dp(96) && historyDialog?.isShowing != true) showHistoryPanel()
+                    else if (dy < dp(100) && dx <= -dp(96) && historyDialog?.isShowing == true) dismissHistoryPanel()
                 }
             }
         }
@@ -290,20 +292,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
     private fun pickImage(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="image/*";addCategory(Intent.CATEGORY_OPENABLE)},45)}
     private fun capturePhoto() {
+        // Open the phone's own camera app. No FileProvider/EXTRA_OUTPUT is used here:
+        // several OEM camera apps fail to launch when the output URI grant is rejected.
         try {
-            val intent = Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
-            val photo = File(cacheDir, "sai_photo_${System.currentTimeMillis()}.jpg")
-            if (!photo.createNewFile()) throw IllegalStateException("Не удалось создать файл фотографии")
-            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", photo)
-            pendingPhotoFile = photo
-            intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, uri)
-            intent.clipData = android.content.ClipData.newUri(contentResolver, "S.AI photo", uri)
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            startActivityForResult(intent, 46)
+            startActivityForResult(Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE), 46)
+        } catch (e: android.content.ActivityNotFoundException) {
+            Toast.makeText(this, "На телефоне не найдено приложение камеры.", Toast.LENGTH_LONG).show()
+        } catch (e: SecurityException) {
+            Toast.makeText(this, "Телефон запретил запуск камеры. Проверь разрешения приложения.", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
-            pendingPhotoFile?.delete()
-            pendingPhotoFile = null
-            Toast.makeText(this, "Камера не запустилась: ${e.javaClass.simpleName}: ${e.localizedMessage ?: "ошибка устройства"}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Не удалось открыть камеру: ${e.localizedMessage ?: e.javaClass.simpleName}", Toast.LENGTH_LONG).show()
         }
     }
     private fun showMemory(){val m=prefs.getString("memory","")?:"";AlertDialog.Builder(this).setTitle("S.AI Memory").setMessage(if(m.isBlank())"Memory is empty. Say: “remember that …”" else m).setPositiveButton("Add"){_,_->val e=EditText(this);e.hint="What should Scrami remember?";AlertDialog.Builder(this).setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("memory",(m+"\n"+e.text.toString()).trim()).apply()}.setNegativeButton("Cancel",null).show()}.setNegativeButton("Clear"){_,_->prefs.edit().remove("memory").apply()}.show()}
@@ -694,15 +692,22 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         super.onActivityResult(req,res,data)
         if(res!=RESULT_OK)return
         if (req == 46) {
-            val file = pendingPhotoFile
-            pendingPhotoFile = null
-            if (file != null && file.exists() && file.length() > 0L) {
-                input.setText("Фото сделано (${file.name}). Опиши, что нужно с ним сделать.")
-                input.setSelection(input.text.length)
-                Toast.makeText(this, "Фото сохранено.", Toast.LENGTH_SHORT).show()
+            val bitmap = data?.extras?.get("data") as? android.graphics.Bitmap
+            if (bitmap != null) {
+                try {
+                    val photo = File(cacheDir, "sai_photo_${System.currentTimeMillis()}.jpg")
+                    FileOutputStream(photo).use { bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, it) }
+                    pendingPhotoFile = photo
+                    input.setText("Фото сделано (${photo.name}). Опиши, что нужно с ним сделать.")
+                    input.setSelection(input.text.length)
+                    Toast.makeText(this, "Камера вернулась в S.AI.", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Фото снято, но не удалось сохранить копию.", Toast.LENGTH_LONG).show()
+                } finally {
+                    bitmap.recycle()
+                }
             } else {
-                file?.delete()
-                Toast.makeText(this, "Съёмка отменена или камера не сохранила фото.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Камера закрыта без снимка.", Toast.LENGTH_SHORT).show()
             }
             return
         }
