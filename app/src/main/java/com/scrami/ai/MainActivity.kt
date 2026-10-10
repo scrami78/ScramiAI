@@ -16,7 +16,6 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.widget.*
-import android.graphics.drawable.GradientDrawable
 import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
