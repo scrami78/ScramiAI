@@ -206,7 +206,26 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun showAttachMenu(){AlertDialog.Builder(this).setItems(arrayOf("📷  Камера","▧  Фото","▤  Файлы")){_,which->when(which){0->capturePhoto();1->pickImage();2->pickFile()}}.show()}
+    private fun showAttachMenu(){
+        val dialog=AlertDialog.Builder(this)
+            .setItems(arrayOf("📷   Камера","▧   Фото","▤   Файлы")){_,which->
+                when(which){0->capturePhoto();1->pickImage();2->pickFile()}
+            }.create()
+        showSleekDialog(dialog)
+    }
+    private fun showSleekDialog(dialog:AlertDialog){
+        dialog.setOnShowListener {
+            dialog.window?.setBackgroundDrawable(rounded(Color.rgb(20,20,23),20f,Color.rgb(55,55,62)))
+            dialog.window?.setDimAmount(0.72f)
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(Color.WHITE)
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Color.rgb(220,220,225))
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(Color.WHITE)
+            dialog.listView?.setBackgroundColor(Color.rgb(20,20,23))
+            dialog.listView?.divider=android.graphics.drawable.ColorDrawable(Color.rgb(45,45,50))
+            dialog.listView?.dividerHeight=dp(1)
+        }
+        dialog.show()
+    }
     private fun pickImage(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="image/*";addCategory(Intent.CATEGORY_OPENABLE)},45)}
     private fun capturePhoto(){
         val intent=Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
@@ -402,7 +421,18 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 when(which){0->newChat();1->showHistory();2->searchHistory();3->showMemory();4->accountDialog();5->settingsDialog();6->openWeb();7->pickFile();8->calculator();9->speakLast()}
             }.setNegativeButton("Close",null).show()
     }
-    private fun showHistory(){AlertDialog.Builder(this).setTitle("История").setMessage((prefs.getString("history","")?:"").takeLast(5000).ifBlank{"История пока пуста."}).setPositiveButton("OK",null).setNegativeButton("Очистить историю"){_,_->prefs.edit().remove("history").remove("visual").apply();chat.removeAllViews();showWelcome()}.show()}
+    private fun showHistory(){
+        val dialog=AlertDialog.Builder(this)
+            .setTitle("История")
+            .setMessage((prefs.getString("history","")?:"").takeLast(5000).ifBlank{"История пока пуста."})
+            .setPositiveButton("ОК",null)
+            .setNegativeButton("Очистить историю"){_,_->
+                prefs.edit().remove("history").remove("visual").apply()
+                chat.removeAllViews()
+                showWelcome()
+            }.create()
+        showSleekDialog(dialog)
+    }
     private fun showHistoryPanel(){showHistory()}
     private fun searchHistory(){val e=EditText(this);e.hint="Search history";AlertDialog.Builder(this).setTitle("Search").setView(e).setPositiveButton("Find"){_,_->val h=prefs.getString("history","")?:"";val q=e.text.toString();AlertDialog.Builder(this).setTitle("Results").setMessage(h.lines().filter{it.contains(q,true)}.joinToString("\n").take(5000).ifBlank{"Nothing found."}).setPositiveButton("OK",null).show()}.setNegativeButton("Cancel",null).show()}
     private fun openWeb(){
