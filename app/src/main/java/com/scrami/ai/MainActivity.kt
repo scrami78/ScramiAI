@@ -187,17 +187,34 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private var gestureStartX = 0f
     private var gestureStartY = 0f
+    private var gestureHandled = false
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
         when (ev.actionMasked) {
             android.view.MotionEvent.ACTION_DOWN -> {
                 gestureStartX = ev.rawX
                 gestureStartY = ev.rawY
+                gestureHandled = false
             }
-            android.view.MotionEvent.ACTION_UP -> {
-                val dx = ev.rawX - gestureStartX
-                val dy = kotlin.math.abs(ev.rawY - gestureStartY)
-                if (historyDialog?.isShowing != true && gestureStartX <= dp(36) && dx >= dp(56) && dy < dp(160)) showHistoryPanel()
-                else if (historyDialog?.isShowing == true && dx <= -dp(56) && dy < dp(160)) dismissHistoryPanel()
+            android.view.MotionEvent.ACTION_MOVE -> {
+                if (!gestureHandled) {
+                    val dx = ev.rawX - gestureStartX
+                    val dy = kotlin.math.abs(ev.rawY - gestureStartY)
+                    if (dy < dp(90) && dx >= dp(72) && gestureStartX <= dp(48) && historyDialog?.isShowing != true) {
+                        gestureHandled = true
+                        showHistoryPanel()
+                    } else if (dy < dp(90) && dx <= -dp(72) && historyDialog?.isShowing == true) {
+                        gestureHandled = true
+                        dismissHistoryPanel()
+                    }
+                }
+            }
+            android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                if (!gestureHandled && ev.actionMasked == android.view.MotionEvent.ACTION_UP) {
+                    val dx = ev.rawX - gestureStartX
+                    val dy = kotlin.math.abs(ev.rawY - gestureStartY)
+                    if (dy < dp(120) && dx >= dp(72) && gestureStartX <= dp(48) && historyDialog?.isShowing != true) showHistoryPanel()
+                    else if (dy < dp(120) && dx <= -dp(72) && historyDialog?.isShowing == true) dismissHistoryPanel()
+                }
             }
         }
         return super.dispatchTouchEvent(ev)
@@ -275,21 +292,18 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun capturePhoto() {
         try {
             val intent = Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
-            if (intent.resolveActivity(packageManager) == null) {
-                Toast.makeText(this, "Камера недоступна на устройстве.", Toast.LENGTH_LONG).show()
-                return
-            }
             val photo = File(cacheDir, "sai_photo_${System.currentTimeMillis()}.jpg")
             if (!photo.createNewFile()) throw IllegalStateException("Не удалось создать файл фотографии")
             val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", photo)
             pendingPhotoFile = photo
             intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, uri)
+            intent.clipData = android.content.ClipData.newUri(contentResolver, "S.AI photo", uri)
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             startActivityForResult(intent, 46)
         } catch (e: Exception) {
             pendingPhotoFile?.delete()
             pendingPhotoFile = null
-            Toast.makeText(this, "Не удалось открыть камеру: ${e.localizedMessage ?: "ошибка устройства"}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Камера не запустилась: ${e.javaClass.simpleName}: ${e.localizedMessage ?: "ошибка устройства"}", Toast.LENGTH_LONG).show()
         }
     }
     private fun showMemory(){val m=prefs.getString("memory","")?:"";AlertDialog.Builder(this).setTitle("S.AI Memory").setMessage(if(m.isBlank())"Memory is empty. Say: “remember that …”" else m).setPositiveButton("Add"){_,_->val e=EditText(this);e.hint="What should Scrami remember?";AlertDialog.Builder(this).setView(e).setPositiveButton("Save"){_,_->prefs.edit().putString("memory",(m+"\n"+e.text.toString()).trim()).apply()}.setNegativeButton("Cancel",null).show()}.setNegativeButton("Clear"){_,_->prefs.edit().remove("memory").apply()}.show()}
@@ -564,8 +578,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         panel.addView(ScrollView(this).apply { isFillViewport = true; addView(list) },
             LinearLayout.LayoutParams(-1, 0, 1f))
         val clear = TextView(this).apply {
-            text = "▤    Очистить историю       ›"; textSize = 14f; setTextColor(Color.rgb(220,220,226))
-            setPadding(dp(4), dp(18), 0, dp(12))
+            text = "Очистить историю"; textSize = 14f; setTextColor(Color.rgb(220,220,226))
+            setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_sai_trash, 0, 0, 0)
+            compoundDrawablePadding = dp(12)
+            setPadding(dp(8), dp(18), 0, dp(12))
             setOnClickListener {
                 AlertDialog.Builder(this@MainActivity).setTitle("Очистить историю?")
                     .setMessage("Все сохранённые сообщения будут удалены.")
