@@ -1,1 +1,12 @@
-<resources><style name="Theme.ScramiAI" parent="Theme.MaterialComponents.DayNight.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:windowLightStatusBar">false</item><item name="android:statusBarColor">@color/scrami_bg</item><item name="android:navigationBarColor">@color/scrami_bg</item><item name="android:colorAccent">@color/scrami_accent</item><item name="android:windowNoTitle">true</item></style></resources>
+<resources>
+    <style name="Theme.ScramiAI" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:statusBarColor">#CC1A1B20</item>
+        <item name="android:navigationBarColor">#CC1A1B20</item>
+        <item name="android:colorAccent">@color/scrami_accent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>
