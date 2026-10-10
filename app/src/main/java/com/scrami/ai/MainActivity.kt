@@ -196,13 +196,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             android.view.MotionEvent.ACTION_UP -> {
                 val dx = ev.rawX - gestureStartX
                 val dy = kotlin.math.abs(ev.rawY - gestureStartY)
-                val edge = dp(36)
-                val threshold = dp(56)
-                if (historyDialog?.isShowing != true && gestureStartX <= edge && dx >= threshold && dy < dp(160)) {
-                    showHistoryPanel()
-                } else if (historyDialog?.isShowing == true && dx <= -threshold && dy < dp(160)) {
-                    dismissHistoryPanel()
-                }
+                if (historyDialog?.isShowing != true && gestureStartX <= dp(36) && dx >= dp(56) && dy < dp(160)) showHistoryPanel()
+                else if (historyDialog?.isShowing == true && dx <= -dp(56) && dy < dp(160)) dismissHistoryPanel()
             }
         }
         return super.dispatchTouchEvent(ev)
@@ -225,7 +220,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             isOutsideTouchable = true
             elevation = dp(12).toFloat()
         }
-        items.forEachIndexed { index, item ->
+        items.forEach { item ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -705,3 +700,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     withContext(Dispatchers.Main){
                         input.setText(if(t.isBlank())"Attachment selected. Ask Scrami what to do with it." else "Analyze this document:\n"+t)
                         input.setSelection(input.text.length)
+                    }
+                }
+            }
+        }
+    }
+    override fun onDestroy(){recognizer?.destroy();tts?.shutdown();super.onDestroy();val m=model;if(m!=null)lifecycleScope.launch(Dispatchers.IO){try{Llama.releaseModel(m)}catch(_:Exception){}}}
+}
