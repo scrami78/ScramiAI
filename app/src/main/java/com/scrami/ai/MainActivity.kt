@@ -183,35 +183,79 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun installSwipe(root:FrameLayout,side:LinearLayout){
-        var downX=0f
-        var tracking=false
-        root.setOnTouchListener{_,e->
-            when(e.action){
-                android.view.MotionEvent.ACTION_DOWN->{
-                    downX=e.x
-                    tracking=downX < dp(42) || side.translationX > 1f
-                    tracking
+        // Swipe gestures are handled at Activity level so child views (including the composer)
+        // cannot swallow the edge gesture. Keep this method for compatibility with buildUi().
+    }
+
+    private var gestureStartX = 0f
+    private var gestureStartY = 0f
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        when (ev.actionMasked) {
+            android.view.MotionEvent.ACTION_DOWN -> {
+                gestureStartX = ev.rawX
+                gestureStartY = ev.rawY
+            }
+            android.view.MotionEvent.ACTION_UP -> {
+                val dx = ev.rawX - gestureStartX
+                val dy = kotlin.math.abs(ev.rawY - gestureStartY)
+                if (gestureStartX < dp(24) && dx > dp(90) && dy < dp(100)) {
+                    showHistoryPanel()
                 }
-                android.view.MotionEvent.ACTION_UP->{
-                    if(!tracking) return@setOnTouchListener false
-                    val dx=e.x-downX
-                    if(dx>80) side.animate().translationX(dp(310).toFloat()).setDuration(180).start()
-                    else if(dx < -80) side.animate().translationX(0f).setDuration(180).start()
-                    tracking=false
-                    true
-                }
-                android.view.MotionEvent.ACTION_CANCEL->{tracking=false;false}
-                else->tracking
             }
         }
+        return super.dispatchTouchEvent(ev)
     }
 
     private fun showAttachMenu(){
-        val dialog=AlertDialog.Builder(this)
-            .setItems(arrayOf("📷   Камера","▧   Фото","▤   Файлы")){_,which->
-                when(which){0->capturePhoto();1->pickImage();2->pickFile()}
-            }.create()
-        showSleekDialog(dialog)
+        val dialog = android.app.Dialog(this)
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(Color.rgb(20,20,23), 24f, Color.rgb(48,48,54))
+            clipToOutline = true
+        }
+        val options = listOf("📷" to "Камера", "▧" to "Фото", "▤" to "Файлы")
+        options.forEachIndexed { index, item ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(22), 0, dp(18), 0)
+                isClickable = true
+                setBackgroundResource(android.R.drawable.list_selector_background)
+                addView(TextView(this@MainActivity).apply {
+                    text = item.first; textSize = 20f; gravity = Gravity.CENTER
+                    setTextColor(Color.WHITE)
+                }, LinearLayout.LayoutParams(dp(38), -1))
+                addView(TextView(this@MainActivity).apply {
+                    text = item.second; textSize = 17f; gravity = Gravity.CENTER_VERTICAL
+                    setTextColor(Color.WHITE)
+                }, LinearLayout.LayoutParams(0, -1, 1f))
+                addView(TextView(this@MainActivity).apply {
+                    text = "›"; textSize = 24f; gravity = Gravity.CENTER
+                    setTextColor(Color.rgb(155,155,162))
+                }, LinearLayout.LayoutParams(dp(22), -1))
+                setOnClickListener {
+                    dialog.dismiss()
+                    when(index){0->capturePhoto();1->pickImage();2->pickFile()}
+                }
+            }
+            panel.addView(row, LinearLayout.LayoutParams(-1, dp(58)))
+            if (index < options.lastIndex) panel.addView(View(this).apply {
+                setBackgroundColor(Color.rgb(48,48,53))
+            }, LinearLayout.LayoutParams(-1, dp(1)))
+        }
+        dialog.setContentView(panel)
+        dialog.window?.let { w ->
+            w.setBackgroundDrawableResource(android.R.color.transparent)
+            w.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            w.setDimAmount(.68f)
+            w.setLayout((resources.displayMetrics.widthPixels - dp(36)), -2)
+            w.setGravity(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+            w.attributes = w.attributes.apply { y = dp(88) }
+        }
+        dialog.show()
+        dialog.window?.setLayout(resources.displayMetrics.widthPixels - dp(36), -2)
+        dialog.window?.setGravity(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
+        dialog.window?.attributes = dialog.window?.attributes?.apply { y = dp(88) }
     }
     private fun showSleekDialog(dialog:AlertDialog){
         dialog.setOnShowListener {
@@ -433,7 +477,85 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }.create()
         showSleekDialog(dialog)
     }
-    private fun showHistoryPanel(){showHistory()}
+    private fun showHistoryPanel(){
+        val dialog = android.app.Dialog(this)
+        val root = FrameLayout(this).apply { setBackgroundColor(Color.TRANSPARENT) }
+        val dim = View(this).apply { setBackgroundColor(0x99000000.toInt()); setOnClickListener { dialog.dismiss() } }
+        root.addView(dim, FrameLayout.LayoutParams(-1,-1))
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(34), dp(14), dp(14))
+            background = rounded(Color.rgb(12,12,14), 0f, Color.rgb(30,30,34))
+            elevation = dp(12).toFloat()
+        }
+        val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        top.addView(TextView(this).apply {
+            text = "S.AI"; textSize = 25f; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE); letterSpacing = .05f
+        }, LinearLayout.LayoutParams(0, dp(48), 1f))
+        top.addView(TextView(this).apply {
+            text = "×"; textSize = 30f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
+            setOnClickListener { dialog.dismiss() }
+        }, LinearLayout.LayoutParams(dp(44), dp(44)))
+        panel.addView(top)
+        panel.addView(TextView(this).apply {
+            text = "История"; textSize = 22f; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE); setPadding(0, dp(24), 0, dp(16))
+        })
+        val newChatRow = TextView(this).apply {
+            text = "＋   Новый чат"; textSize = 16f; setTextColor(Color.WHITE)
+            setPadding(dp(14), dp(16), dp(12), dp(16))
+            background = rounded(Color.rgb(25,25,28), 16f, Color.rgb(37,37,42))
+            setOnClickListener { dialog.dismiss(); newChat() }
+        }
+        panel.addView(newChatRow, LinearLayout.LayoutParams(-1, -2))
+        val historyText = prefs.getString("history","") ?: ""
+        val entries = historyText.lines().filter { it.startsWith("USER:") }.takeLast(30).asReversed()
+        val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        if (entries.isEmpty()) {
+            list.addView(TextView(this).apply {
+                text = "История пока пуста."; textSize = 15f
+                setTextColor(Color.rgb(160,160,168)); setPadding(dp(4), dp(20), 0, dp(10))
+            })
+        } else entries.forEachIndexed { index, line ->
+            val title = line.removePrefix("USER:").trim().ifBlank { "Новый чат" }.take(72)
+            list.addView(TextView(this).apply {
+                text = "◉   $title"; textSize = 15f; setTextColor(Color.rgb(232,232,236))
+                setPadding(dp(12), dp(15), dp(8), dp(15))
+                background = rounded(Color.rgb(22,22,25), 14f, Color.TRANSPARENT)
+            }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) })
+        }
+        panel.addView(ScrollView(this).apply { isFillViewport = true; addView(list) },
+            LinearLayout.LayoutParams(-1, 0, 1f))
+        val clear = TextView(this).apply {
+            text = "▤    Очистить историю       ›"; textSize = 14f; setTextColor(Color.rgb(220,220,226))
+            setPadding(dp(4), dp(18), 0, dp(12))
+            setOnClickListener {
+                AlertDialog.Builder(this@MainActivity).setTitle("Очистить историю?")
+                    .setMessage("Все сохранённые сообщения будут удалены.")
+                    .setNegativeButton("Отмена", null)
+                    .setPositiveButton("Очистить") { _, _ ->
+                        prefs.edit().remove("history").remove("visual").apply()
+                        chat.removeAllViews(); showWelcome(); dialog.dismiss()
+                    }.show()
+            }
+        }
+        panel.addView(clear)
+        root.addView(panel, FrameLayout.LayoutParams((resources.displayMetrics.widthPixels * .84f).roundToInt(), -1, Gravity.START))
+        dialog.setContentView(root)
+        dialog.window?.let { w ->
+            w.setBackgroundDrawableResource(android.R.color.transparent)
+            w.setLayout(-1, -1)
+            w.setGravity(Gravity.TOP or Gravity.START)
+            w.setDimAmount(0f)
+            w.setWindowAnimations(android.R.style.Animation_Activity)
+        }
+        dialog.show()
+        dialog.window?.setLayout(-1, -1)
+        panel.translationX = -dp(340).toFloat()
+        panel.animate().translationX(0f).setDuration(220).start()
+        dialog.setOnDismissListener { }
+    }
     private fun searchHistory(){val e=EditText(this);e.hint="Search history";AlertDialog.Builder(this).setTitle("Search").setView(e).setPositiveButton("Find"){_,_->val h=prefs.getString("history","")?:"";val q=e.text.toString();AlertDialog.Builder(this).setTitle("Results").setMessage(h.lines().filter{it.contains(q,true)}.joinToString("\n").take(5000).ifBlank{"Nothing found."}).setPositiveButton("OK",null).show()}.setNegativeButton("Cancel",null).show()}
     private fun openWeb(){
         val q=input.text.toString().trim()
