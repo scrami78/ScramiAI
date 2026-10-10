@@ -23,6 +23,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import dev.ffmpegkit.llama.Llama
 import dev.ffmpegkit.llama.LlamaConfig
 import dev.ffmpegkit.llama.LlamaModel
@@ -54,6 +56,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.BLACK
         window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
@@ -68,6 +72,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val main = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), statusBarHeight() + dp(6), dp(14), dp(8))
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.statusBars())
+            val nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            main.setPadding(dp(14), bars.top + dp(6), dp(14), dp(4))
+            root.setPadding(0, 0, 0, maxOf(nav.bottom, ime.bottom))
+            insets
         }
 
         val header = LinearLayout(this).apply {
@@ -137,7 +149,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         chatViewport.addView(View(this).apply {
             background = android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP,
-                intArrayOf(Color.rgb(15,16,20), Color.TRANSPARENT)
+                intArrayOf(Color.BLACK, Color.TRANSPARENT)
             )
             isClickable = false
         }, FrameLayout.LayoutParams(-1, dp(26), Gravity.BOTTOM))
@@ -146,7 +158,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 val composer = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(6), dp(6), dp(6), dp(6))
-            background = rounded(Color.rgb(24,24,27), 28f, Color.rgb(54,54,59))
+            background = rounded(Color.TRANSPARENT, 28f, Color.rgb(65,65,65))
+            elevation = 0f
         }
         val plus = TextView(this).apply {
             text = "+"; textSize = 30f; gravity = Gravity.CENTER; typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
