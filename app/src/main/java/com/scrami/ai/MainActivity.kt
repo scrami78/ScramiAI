@@ -95,8 +95,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         header.addView(menu, LinearLayout.LayoutParams(dp(48), dp(48)))
         val mark = TextView(this).apply {
-            text = "S.AI"; textSize = 25f; gravity = Gravity.CENTER; typeface = Typeface.create("sans-serif", Typeface.BOLD)
-            setTextColor(Color.WHITE); letterSpacing = .04f
+            text = "S.AI"; textSize = 27f; gravity = Gravity.CENTER; typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            setTextColor(Color.WHITE); letterSpacing = .015f; includeFontPadding = false
         }
         header.addView(mark, LinearLayout.LayoutParams(0, dp(48), 1f))
         status = TextView(this).apply {
@@ -184,6 +184,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         // Clean chat layout: remove technical footer clutter.
 
         root.addView(main, FrameLayout.LayoutParams(-1,-1))
+        // "Sausage transparent": soft charcoal haze under the status bar, fading into the chat.
+        val topHaze = View(this).apply {
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0x302B2D34, 0x18202025, Color.TRANSPARENT)
+            )
+            isClickable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        root.addView(topHaze, FrameLayout.LayoutParams(-1, dp(190), Gravity.TOP))
         val side = buildSidebar()
         root.addView(side, FrameLayout.LayoutParams(dp(310),-1).apply { gravity = Gravity.START; leftMargin = -dp(310) })
         installSwipe(root,side)
@@ -198,7 +208,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             elevation=dp(8).toFloat()
         }
         side.addView(TextView(this).apply{
-            text="S.AI";textSize=24f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.BLACK)
+            text="S.AI";textSize=27f;typeface=Typeface.create("sans-serif",Typeface.BOLD);setTextColor(Color.WHITE);letterSpacing=.015f
             setPadding(0,0,0,dp(20))
         })
         side.addView(TextView(this).apply{
@@ -574,8 +584,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         panel.animate().cancel()
         panel.animate().translationX(-panel.width.toFloat())
-            .setDuration(155)
-            .setInterpolator(android.view.animation.AccelerateInterpolator())
+            .setDuration(115)
+            .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1f, 0.36f, 1f))
             .withEndAction {
                 if (historyDialog === dialog) {
                     dialog.dismiss()
@@ -604,7 +614,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
         }.apply { setBackgroundColor(Color.TRANSPARENT) }
         val dim = View(this).apply {
-            setBackgroundColor(0x99000000.toInt())
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                intArrayOf(0xB8000000.toInt(), 0x8A000000.toInt(), 0x70000000.toInt())
+            )
             setOnClickListener { dialog.dismiss() }
         }
         root.addView(dim, FrameLayout.LayoutParams(-1,-1))
@@ -616,8 +629,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         top.addView(TextView(this).apply {
-            text = "S.AI"; textSize = 25f; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE); letterSpacing = .05f
+            text = "S.AI"; textSize = 27f; typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            setTextColor(Color.WHITE); letterSpacing = .015f; includeFontPadding = false
         }, LinearLayout.LayoutParams(0, dp(48), 1f))
         top.addView(TextView(this).apply {
             text = "×"; textSize = 30f; gravity = Gravity.CENTER; setTextColor(Color.WHITE)
