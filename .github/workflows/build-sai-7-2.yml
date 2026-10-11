@@ -8,7 +8,7 @@ on:
       - '.github/workflows/build-sai-7-2.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,3 +34,12 @@ jobs:
           name: SAI-7.2-icon-fixed
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+      - name: Publish APK to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: sai-7.2-icon-fix
+          name: S.AI 7.2 — исправленная иконка
+          body: APK S.AI 7.2 с выровненной белой надписью на чёрном фоне. Сборка создана GitHub Actions.
+          prerelease: true
+          make_latest: false
+          files: app/build/outputs/apk/debug/*.apk
